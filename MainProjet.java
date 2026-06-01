@@ -9,7 +9,6 @@ public class MainProjet
 		
 		// --- 1. LECTURE, LABELLISATION ET MÉLANGE (TRAIN) ---
 		System.out.println("Lecture et labellisation du dataset d'entraînement...");
-		// Utilisation de la méthode de ton collègue pour tout charger !
 		List<Image> imagesTrain = Image.chargeDataset("dataset_animaux/train/", true);
 		
 		if (imagesTrain == null || imagesTrain.isEmpty()) {
@@ -18,7 +17,6 @@ public class MainProjet
 		}
 
 		System.out.println("Mélange des données d'entraînement...");
-		// Utilisation de la méthode de ton collègue pour le mélange aléatoire
 		Image.melange(imagesTrain);
 		
 		// --- 2. EXTRACTION ET NORMALISATION SÉCURISÉE ---
@@ -29,16 +27,15 @@ public class MainProjet
 
 		for (Image img : imagesTrain) 
 		{
-			// BOUCLIER ANTI-CRASH : On ignore l'image si elle n'a pas pu être lue
+			// BOUCLIER ANTI-CRASH : On ignore l'image si elle est corrompue
 			if (img.donnees() == null) {
 				continue; 
 			}
 			
-			// Normalisation en une ligne grâce au code du collègue
 			listeEntrees.add(img.donneesNormalisees());
 			
-			// Adaptation du label : le neurone attend 1 pour un chat, 0 pour le reste.
-			// (Dans Image.java, LabelChat vaut 0).
+			// Adaptation : le neurone attend 1 pour un chat, 0 pour le reste.
+			// (Dans la classe Image, le label Chat vaut 0).
 			float labelPourNeurone = (img.label() == 0) ? 1.0f : 0.0f;
 			listeResultats.add(labelPourNeurone);
 		}
@@ -57,6 +54,8 @@ public class MainProjet
 		}
 		
 		int nbEntreesNeurone = entreesArray[0].length;
+		
+		// Instanciation de votre propre classe de Niveau 1
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
 		final float MSElimite = 0.05f; 
 		
@@ -64,46 +63,46 @@ public class MainProjet
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
 		System.out.println(">>> Apprentissage terminé avec succès ! <<<");
 		
-		// --- 4. PHASE DE TEST (ÉVALUATION) ---
-		System.out.println("\n--- DÉBUT DE LA PHASE DE TEST ---");
-		System.out.println("Lecture et labellisation du dataset de test...");
+		// --- 4. DÉMONSTRATION VISUELLE (LE CRASH TEST) ---
+		System.out.println("\n--- DÉMONSTRATION : QUE VOIT L'IA ? ---");
+		System.out.println("Chargement du dataset de test...");
 		
-		// On réutilise la super méthode du collègue pour le dossier de test
 		List<Image> imagesTest = Image.chargeDataset("dataset_animaux/test/", true);
 		
 		if (imagesTest != null && !imagesTest.isEmpty()) {
-			int bonnesReponses = 0;
-			int totalTestSains = 0;
+			// On mélange pour ne pas avoir que des chats ou que des chiens
+			Image.melange(imagesTest);
 			
-			System.out.println("Évaluation sur " + imagesTest.size() + " nouvelles images...");
+			System.out.println("On pioche 5 images au hasard pour voir si l'IA s'est bien entraînée :");
 
-			for (Image imgTest : imagesTest) 
+			// On boucle uniquement sur les 5 premières images saines
+			int testsRealises = 0;
+			for (int i = 0; i < imagesTest.size() && testsRealises < 5; i++) 
 			{
-				// Protection également activée pendant la phase de test
+				Image imgTest = imagesTest.get(i);
+				
 				if (imgTest.donnees() == null) {
-					continue;
+					continue; // On esquive les corrompues
 				}
 				
-				totalTestSains++;
+				testsRealises++;
 				
-				// On fait faire une prédiction au neurone avec les données normalisées
+				// On donne l'image au "cerveau"
 				neurone.metAJour(imgTest.donneesNormalisees());
+				float proba = neurone.sortie();
 				
-				// Le neurone sort une probabilité. Si > 0.5, il pense "Chat" (1), sinon "Autre" (0)
-				int labelPredit = (neurone.sortie() > 0.5f) ? 1 : 0;
+				// On récupère le vrai type d'animal pour vérifier (0 = Chat, 1 = Chien, 2 = Wild)
+				String vraiAnimal = (imgTest.label() == 0) ? "CHAT" : (imgTest.label() == 1 ? "CHIEN" : "WILD (Sauvage)");
 				
-				// On compare avec le vrai label attendu
-				int labelAttendu = (imgTest.label() == 0) ? 1 : 0;
+				System.out.printf("\n--- Test n°%d --- \n", testsRealises);
+				System.out.printf("Vraie image : %s\n", vraiAnimal);
+				System.out.printf("Certitude de l'IA d'être un CHAT : %.1f %%\n", (proba * 100));
 				
-				if (labelPredit == labelAttendu) {
-					bonnesReponses++;
+				if (proba > 0.5f) {
+					System.out.println("=> L'IA a tranché : C'EST UN CHAT ! 🐱");
+				} else {
+					System.out.println("=> L'IA a tranché : C'EST UN CHIEN (ou autre) ! 🐶");
 				}
-			}
-			
-			if (totalTestSains > 0) {
-				float pourcentageReussite = ((float) bonnesReponses / totalTestSains) * 100;
-				System.out.printf(">>> Résultat du test : %d bonnes réponses sur %d (soit %.2f %% de précision) <<<\n", 
-									bonnesReponses, totalTestSains, pourcentageReussite);
 			}
 		} else {
 			System.out.println("Dossier de test introuvable ou vide.");
