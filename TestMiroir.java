@@ -65,7 +65,7 @@ public class TestMiroir
 		// 4. ENTRAÎNEMENT DU NEURONE
 		int nbEntreesNeurone = entreesArray[0].length;
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.05f; 
+		final float MSElimite = 0.20f; 
 		
 		System.out.println("Début de l'apprentissage sur le dataset augmenté...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
