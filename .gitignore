@@ -1,0 +1,15 @@
+# Fichiers compilés Java
+*.class
+
+# Dossiers d'éditeurs de code
+.idea/
+.vscode/
+*.iml
+*.project
+*.classpath
+*.settings/
+
+# Le dataset d'images
+dataset_animaux/
+*.jpg
+*.png
