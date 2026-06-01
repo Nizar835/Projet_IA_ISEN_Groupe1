@@ -80,7 +80,7 @@ public class TestRGB
 		System.out.println("Le réseau aura " + nbEntreesNeurone + " synapses (3 par pixel).");
 		
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.05f; 
+		final float MSElimite = 0.20f; 
 		
 		System.out.println("Début de l'apprentissage (Attention, cela sera plus long en RGB)...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
