@@ -23,7 +23,18 @@ public class Image
     public int taille() {return donnees.length;} // nombre de pixels: hauteur*largeur ou 3*hauteur*largeur pour une image RGB
     public int[] donnees() {return donnees;}
 
+<<<<<<< HEAD
     public boolean estEnNiveauxDeGris() {return taille() == largeur() * hauteur();}
+=======
+	public boolean estEnNiveauxDeGris() {return taille() == largeur() * hauteur();}
+// Normalise les pixels de 0-255 vers 0.0-1.0 pour le neurone
+ public float[] donneesNormalisees() {
+    float[] normalise = new float[donnees.length];
+    for (int i = 0; i < donnees.length; i++)
+        normalise[i] = donnees[i] / 255.0f;
+    return normalise;
+ }
+>>>>>>> 8735f2b91868032f3868d0c7d80c39d6acf31c39
 
     public void afficheMetadonnees() {
         String type = estEnNiveauxDeGris() ? "grayscale" : " couleurs";
@@ -31,6 +42,7 @@ public class Image
             type, label(), largeur(), hauteur(), taille());
     }
 
+<<<<<<< HEAD
     public Image(final String cheminImage, int label, boolean niveauxDeGris) {
         try {
             final BufferedImage img = ImageIO.read(new File(cheminImage));
@@ -63,6 +75,57 @@ public class Image
             System.err.printf("Image non trouvée ou non lisible: %s\n", cheminImage);
         }
     }
+=======
+	public Image(final String cheminImage, int label, boolean niveauxDeGris) {
+		try {
+			final BufferedImage img = ImageIO.read(new File(cheminImage));
+			this.label = label;
+			largeur = img.getWidth(null);
+			hauteur = img.getHeight(null);
+			final int taille = niveauxDeGris ? hauteur*largeur : 3*hauteur*largeur;
+			donnees = new int[taille];
+			for (int i = 0; i < hauteur; ++i) {
+				for (int j = 0; j < largeur; ++j) {
+					final long rgb = img.getRGB(j, i);
+					final int r = (int)((rgb>>16)&255);	// Isoler la composante rouge
+					final int g = (int)((rgb>>8)&255);	// Isoler la composante verte
+					final int b = (int)((rgb)&255);		// Isoler la composante bleue
+					final int index = i * largeur + j;
+					if (niveauxDeGris) {
+						final float gris = 0.2125f * r + 0.7154f * g + 0.0721f * b; // RGB -> niveaux de gris
+						donnees[index] = (int) Math.max(0, Math.min(255, gris));
+					}
+					else {
+						donnees[3*index+0] = r;
+						donnees[3*index+1] = g;
+						donnees[3*index+2] = b;
+					}
+				}
+			}
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			System.err.printf("Image non trouvée ou non lisible: %s\n", cheminImage);
+		}
+	}
+     // Charge toutes les images d'un dossier avec leur label automatique
+public static List<Image> chargeDataset(String repertoire, boolean niveauxDeGris) {
+    List<Image> images = new ArrayList<>();
+    List<String> fichiers = listeFichiers(repertoire);
+    for (String chemin : fichiers) {
+        int label = chemin.contains("cat") ? LabelChat :
+                    chemin.contains("dog") ? LabelChien :
+                    chemin.contains("wild") ? LabelWild : LabelInconnu;
+        images.add(new Image(chemin, label, niveauxDeGris));
+    }
+    return images;
+}
+
+ // Mélange aléatoirement la liste d'images
+ public static void melange(List<Image> images) {
+    Collections.shuffle(images);
+ }
+>>>>>>> 8735f2b91868032f3868d0c7d80c39d6acf31c39
 
     // =========================================================================
     // NOUVELLE MÉTHODE : NORMALISATION DU SIGNAL POUR LE NEURONE
@@ -79,6 +142,7 @@ public class Image
     }
     // =========================================================================
 
+<<<<<<< HEAD
     public static List<String> listeFichiers(String repertoire) {
         List<String> cheminsFichiers = null;
         try {
@@ -125,3 +189,13 @@ public class Image
         }
     }
 }
+=======
+	public static void main (String[] args)
+	{
+		List<Image> images = chargeDataset("dataset_animaux/train/", true);
+melange(images);
+System.out.println("Nombre d'images chargées : " + images.size());
+images.get(0).afficheMetadonnees();
+	}
+}
+>>>>>>> 8735f2b91868032f3868d0c7d80c39d6acf31c39
