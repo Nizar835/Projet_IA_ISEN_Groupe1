@@ -26,11 +26,16 @@ public class TestRGB
 		{
 			int labelAttendu = chemin.contains("cat") ? 1 : 0;
 			
-			// L'ARGUMENT CRUCIAL EST ICI : false = mode RGB (Couleurs)
+			// false = mode RGB (Couleurs)
 			Image img = new Image(chemin, labelAttendu, false); 
 			
+			// BOUCLIER ANTI-CRASH : Sécurité pour le fichier corrompu
+			if (img.donnees() == null) {
+				System.out.println("⚠️ Image RGB ignorée car corrompue : " + chemin);
+				continue;
+			}
+			
 			// --- 2. NORMALISATION ---
-			// Le tableau contient 3 fois plus de données (Rouge, Vert, Bleu pour chaque pixel)
 			int[] pixelsBruts = img.donnees();
 			float[] pixelsNormalises = new float[pixelsBruts.length];
 			
@@ -86,15 +91,20 @@ public class TestRGB
 		List<String> fichiersTest = Image.listeFichiers(dossierTest);
 		
 		int bonnesReponses = 0;
-		int totalTest = fichiersTest.size();
+		int totalTestSains = 0;
 
 		for (String chemin : fichiersTest) 
 		{
 			int labelAttendu = chemin.contains("cat") ? 1 : 0;
 			
-			// Chargement en couleurs pour le test aussi
 			Image imgTest = new Image(chemin, labelAttendu, false);
 			
+			// Protection pendant la phase de test
+			if (imgTest.donnees() == null) {
+				continue;
+			}
+			
+			totalTestSains++;
 			int[] pixelsBrutsTest = imgTest.donnees();
 			float[] pixelsNormalisesTest = new float[pixelsBrutsTest.length];
 			for (int i = 0; i < pixelsBrutsTest.length; i++) {
@@ -109,8 +119,10 @@ public class TestRGB
 			}
 		}
 		
-		float pourcentageReussite = ((float) bonnesReponses / totalTest) * 100;
-		System.out.printf(">>> Précision du modèle RGB : %.2f %% (%d/%d) <<<\n", 
-							pourcentageReussite, bonnesReponses, totalTest);
+		if (totalTestSains > 0) {
+			float pourcentageReussite = ((float) bonnesReponses / totalTestSains) * 100;
+			System.out.printf(">>> Précision du modèle RGB : %.2f %% (%d/%d) <<<\n", 
+								pourcentageReussite, bonnesReponses, totalTestSains);
+		}
 	}
 }
