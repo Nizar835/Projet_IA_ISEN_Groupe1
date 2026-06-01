@@ -1,5 +1,6 @@
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class MainProjet 
 {
@@ -49,6 +50,31 @@ public class MainProjet
 		
 		System.out.println("Données prêtes !");
 		
-		// Il restera à mélanger ces listes (Étape 4) avant de les donner au neurone...
+		// --- 4. MÉLANGE DES DONNÉES ---
+		System.out.println("Mélange des données d'entraînement...");
+		
+		// Création d'une liste d'index (0, 1, 2, ..., N-1)
+		List<Integer> indexList = new ArrayList<>();
+		for (int i = 0; i < listeEntrees.size(); i++) {
+			indexList.add(i);
+		}
+		
+		// Mélange aléatoire des index
+		Collections.shuffle(indexList);
+		
+		// Création de nouvelles listes pour stocker les données dans le nouvel ordre
+		List<float[]> entreesMelangees = new ArrayList<>();
+		List<Float> resultatsMelanges = new ArrayList<>();
+		
+		for (int index : indexList) {
+			entreesMelangees.add(listeEntrees.get(index));
+			resultatsMelanges.add(listeResultats.get(index));
+		}
+		
+		// Remplacement des anciennes listes par les nouvelles bien mélangées
+		listeEntrees = entreesMelangees;
+		listeResultats = resultatsMelanges;
+		
+		System.out.println("Mélange terminé ! Les labels correspondent toujours aux bonnes images.");
 	}
 }
