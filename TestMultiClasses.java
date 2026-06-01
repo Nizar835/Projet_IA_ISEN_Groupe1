@@ -49,7 +49,7 @@ public class TestMultiClasses
 			consignesWild[i]  = (labelBrut == 2) ? 1.0f : 0.0f; // S'active uniquement sur les sauvages
 		}
 
-		final float MSElimite = 0.18f; // Seuil tolérant pour le test rapide
+		final float MSElimite = 0.1f; // Seuil tolérant pour le test rapide
 
 		System.out.println("\n--- Entraînement du Neurone Spécialiste CHAT ---");
 		iNeurone neuroneChat = new NeuroneSigmoide(nbEntreesNeurone);
