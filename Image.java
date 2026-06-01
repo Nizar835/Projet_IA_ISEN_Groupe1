@@ -23,6 +23,13 @@ public class Image
 	public int[] donnees() {return donnees;}
 
 	public boolean estEnNiveauxDeGris() {return taille() == largeur() * hauteur();}
+// Normalise les pixels de 0-255 vers 0.0-1.0 pour le neurone
+ public float[] donneesNormalisees() {
+    float[] normalise = new float[donnees.length];
+    for (int i = 0; i < donnees.length; i++)
+        normalise[i] = donnees[i] / 255.0f;
+    return normalise;
+ }
 
 	public void afficheMetadonnees() {
 		String type = estEnNiveauxDeGris() ? "grayscale" : " couleurs";
@@ -62,6 +69,23 @@ public class Image
 			System.err.printf("Image non trouvée ou non lisible: %s\n", cheminImage);
 		}
 	}
+     // Charge toutes les images d'un dossier avec leur label automatique
+public static List<Image> chargeDataset(String repertoire, boolean niveauxDeGris) {
+    List<Image> images = new ArrayList<>();
+    List<String> fichiers = listeFichiers(repertoire);
+    for (String chemin : fichiers) {
+        int label = chemin.contains("cat") ? LabelChat :
+                    chemin.contains("dog") ? LabelChien :
+                    chemin.contains("wild") ? LabelWild : LabelInconnu;
+        images.add(new Image(chemin, label, niveauxDeGris));
+    }
+    return images;
+}
+
+ // Mélange aléatoirement la liste d'images
+ public static void melange(List<Image> images) {
+    Collections.shuffle(images);
+ }
 
 	public static List<String> listeFichiers(String repertoire) {
 		List<String> cheminsFichiers = null;
@@ -80,16 +104,9 @@ public class Image
 
 	public static void main (String[] args)
 	{
-		List<String> cheminsFichiers = listeFichiers("dataset_animaux/");
-		for (String chemin : cheminsFichiers) {
-			System.out.println(chemin);
-		}
-
-		final String chemin = "dataset_animaux/train/dog/010552.jpg";
-		final int labelImage = chemin.indexOf("dog") != -1 ? LabelChien : LabelInconnu;
-		Image im1 = new Image(chemin, labelImage, false);
-		Image im2 = new Image(chemin, labelImage, true);
-		im1.afficheMetadonnees();
-		im2.afficheMetadonnees();
+		List<Image> images = chargeDataset("dataset_animaux/train/", true);
+melange(images);
+System.out.println("Nombre d'images chargées : " + images.size());
+images.get(0).afficheMetadonnees();
 	}
 }
