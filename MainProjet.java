@@ -19,11 +19,11 @@ public class MainProjet
 		System.out.println("Mélange des données d'entraînement...");
 		Image.melange(imagesTrain);
 		
-		// --- 2. EXTRACTION ET NORMALISATION SÉCURISÉE ---
+		// --- 2. EXTRACTION, NORMALISATION ET AUGMENTATION (MIROIR) ---
 		List<float[]> listeEntrees = new ArrayList<>();
 		List<Float> listeResultats = new ArrayList<>();
 		
-		System.out.println("Normalisation et vérification des " + imagesTrain.size() + " images...");
+		System.out.println("Normalisation et création des images miroirs (Niveau 3)...");
 
 		for (Image img : imagesTrain) 
 		{
@@ -32,12 +32,30 @@ public class MainProjet
 				continue; 
 			}
 			
-			listeEntrees.add(img.donneesNormalisees());
-			
-			// Adaptation : le neurone attend 1 pour un chat, 0 pour le reste.
-			// (Dans la classe Image, le label Chat vaut 0).
+			// Le neurone attend 1 pour un chat, 0 pour le reste.
 			float labelPourNeurone = (img.label() == 0) ? 1.0f : 0.0f;
+
+			// A. On ajoute l'image normale
+			listeEntrees.add(img.donneesNormalisees());
 			listeResultats.add(labelPourNeurone);
+
+			// B. On ajoute l'image inversée (Filtre Miroir)
+			int[] pixelsBruts = img.donnees(); 
+			float[] pixelsFloat = new float[pixelsBruts.length];
+			for(int i = 0; i < pixelsBruts.length; i++) {
+				pixelsFloat[i] = (float)pixelsBruts[i];
+			}
+			
+			// On applique le filtre de votre classe FiltreImage
+			float[] miroir = FiltreImage.miroirGris(pixelsFloat, img.largeur(), img.hauteur());
+			
+			// On normalise le miroir (division par 255)
+			for(int i = 0; i < miroir.length; i++) {
+				miroir[i] /= 255.0f;
+			}
+
+			listeEntrees.add(miroir);
+			listeResultats.add(labelPourNeurone); // Le miroir d'un chat reste un chat
 		}
 		
 		// --- 3. ENTRAÎNEMENT DU NEURONE ---
@@ -55,55 +73,49 @@ public class MainProjet
 		
 		int nbEntreesNeurone = entreesArray[0].length;
 		
-		// Instanciation de votre propre classe de Niveau 1
+		// Instanciation du neurone Sigmoïde (robuste au bruit)
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
 		final float MSElimite = 0.05f; 
 		
-		System.out.println("Début de l'apprentissage supervisé sur " + entreesArray.length + " images saines...");
+		System.out.println("Début de l'apprentissage supervisé sur " + entreesArray.length + " images (originales + miroirs)...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
 		System.out.println(">>> Apprentissage terminé avec succès ! <<<");
 		
-		// --- 4. DÉMONSTRATION VISUELLE (LE CRASH TEST) ---
-		System.out.println("\n--- DÉMONSTRATION : QUE VOIT L'IA ? ---");
+		// --- 4. PHASE DE TEST (ÉVALUATION GLOBALE) ---
+		System.out.println("\n--- DÉMONSTRATION : ÉVALUATION SUR LE JEU DE TEST ---");
 		System.out.println("Chargement du dataset de test...");
 		
 		List<Image> imagesTest = Image.chargeDataset("dataset_animaux/test/", true);
 		
 		if (imagesTest != null && !imagesTest.isEmpty()) {
-			// On mélange pour ne pas avoir que des chats ou que des chiens
-			Image.melange(imagesTest);
 			
-			System.out.println("On pioche 5 images au hasard pour voir si l'IA s'est bien entraînée :");
+			int bonnesReponses = 0;
+			int totalTest = 0;
 
-			// On boucle uniquement sur les 5 premières images saines
-			int testsRealises = 0;
-			for (int i = 0; i < imagesTest.size() && testsRealises < 5; i++) 
+			System.out.println("Passage de l'examen final sur toutes les images inédites...");
+
+			for (Image imgTest : imagesTest) 
 			{
-				Image imgTest = imagesTest.get(i);
+				if (imgTest.donnees() == null) continue; // Sécurité
 				
-				if (imgTest.donnees() == null) {
-					continue; // On esquive les corrompues
-				}
-				
-				testsRealises++;
-				
-				// On donne l'image au "cerveau"
+				// On donne l'image au réseau
 				neurone.metAJour(imgTest.donneesNormalisees());
 				float proba = neurone.sortie();
 				
-				// On récupère le vrai type d'animal pour vérifier (0 = Chat, 1 = Chien, 2 = Wild)
-				String vraiAnimal = (imgTest.label() == 0) ? "CHAT" : (imgTest.label() == 1 ? "CHIEN" : "WILD (Sauvage)");
+				// On vérifie le résultat
+				float vraiLabel = (imgTest.label() == 0) ? 1.0f : 0.0f;
+				float reponseArrondie = (proba >= 0.5f) ? 1.0f : 0.0f;
 				
-				System.out.printf("\n--- Test n°%d --- \n", testsRealises);
-				System.out.printf("Vraie image : %s\n", vraiAnimal);
-				System.out.printf("Certitude de l'IA d'être un CHAT : %.1f %%\n", (proba * 100));
-				
-				if (proba > 0.5f) {
-					System.out.println("=> L'IA a tranché : C'EST UN CHAT ! 🐱");
-				} else {
-					System.out.println("=> L'IA a tranché : C'EST UN CHIEN (ou autre) ! 🐶");
+				if (reponseArrondie == vraiLabel) {
+					bonnesReponses++;
 				}
+				totalTest++;
 			}
+			
+			// Calcul et affichage du score
+			float pourcentage = ((float) bonnesReponses / totalTest) * 100.0f;
+			System.out.printf("\n>>> SCORE FINAL DE L'IA : %.2f %% de réussite (%d/%d) <<<\n", pourcentage, bonnesReponses, totalTest);
+			
 		} else {
 			System.out.println("Dossier de test introuvable ou vide.");
 		}
