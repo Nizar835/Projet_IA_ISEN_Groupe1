@@ -19,11 +19,11 @@ public class MainProjet
 		System.out.println("Mélange des données d'entraînement...");
 		Image.melange(imagesTrain);
 		
-		// --- 2. EXTRACTION, NORMALISATION ET AUGMENTATION (MIROIR) ---
+		// --- 2. EXTRACTION ET NORMALISATION ---
 		List<float[]> listeEntrees = new ArrayList<>();
 		List<Float> listeResultats = new ArrayList<>();
 		
-		System.out.println("Normalisation et création des images miroirs (Niveau 3)...");
+		System.out.println("Normalisation des images (Niveau 2)...");
 
 		for (Image img : imagesTrain) 
 		{
@@ -35,27 +35,9 @@ public class MainProjet
 			// Le neurone attend 1 pour un chat, 0 pour le reste.
 			float labelPourNeurone = (img.label() == 0) ? 1.0f : 0.0f;
 
-			// A. On ajoute l'image normale
+			// On ajoute l'image normale
 			listeEntrees.add(img.donneesNormalisees());
 			listeResultats.add(labelPourNeurone);
-
-			// B. On ajoute l'image inversée (Filtre Miroir)
-			int[] pixelsBruts = img.donnees(); 
-			float[] pixelsFloat = new float[pixelsBruts.length];
-			for(int i = 0; i < pixelsBruts.length; i++) {
-				pixelsFloat[i] = (float)pixelsBruts[i];
-			}
-			
-			// On applique le filtre de votre classe FiltreImage
-			float[] miroir = FiltreImage.miroirGris(pixelsFloat, img.largeur(), img.hauteur());
-			
-			// On normalise le miroir (division par 255)
-			for(int i = 0; i < miroir.length; i++) {
-				miroir[i] /= 255.0f;
-			}
-
-			listeEntrees.add(miroir);
-			listeResultats.add(labelPourNeurone); // Le miroir d'un chat reste un chat
 		}
 		
 		// --- 3. ENTRAÎNEMENT DU NEURONE ---
@@ -75,9 +57,9 @@ public class MainProjet
 		
 		// Instanciation du neurone Sigmoïde (robuste au bruit)
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.10f; 
+		final float MSElimite = 0.15f; 
 		
-		System.out.println("Début de l'apprentissage supervisé sur " + entreesArray.length + " images (originales + miroirs)...");
+		System.out.println("Début de l'apprentissage supervisé sur " + entreesArray.length + " images originales...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
 		System.out.println(">>> Apprentissage terminé avec succès ! <<<");
 
