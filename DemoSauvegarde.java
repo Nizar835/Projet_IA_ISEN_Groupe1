@@ -1,52 +1,62 @@
 import java.util.List;
+import java.util.Collections;
 
 public class DemoSauvegarde 
 {
 	public static void main(String[] args) 
 	{
-		System.out.println("=== TEST DU CHARGEMENT DE L'IA (SANS ENTRAÎNEMENT) ===");
+		System.out.println("=== TEST DE L'IA (SANS ENTRAÎNEMENT) ===");
 
-		// 1. On charge le dataset de test pour piocher une image
-		System.out.println("Lecture du dossier test...");
-		List<Image> imagesTest = Image.chargeDataset("dataset_animaux/test/", true);
+		// 1. On récupère la liste des noms de fichiers
+		String dossierTest = "dataset_animaux/test/";
+		List<String> fichiersTest = Image.listeFichiers(dossierTest);
 		
-		if (imagesTest == null || imagesTest.isEmpty()) {
+		if (fichiersTest == null || fichiersTest.isEmpty()) {
 			System.out.println("Erreur : Dossier test introuvable.");
 			return;
 		}
 
-		// On mélange et on prend la première image saine qui vient
-		Image.melange(imagesTest);
-		Image imageChoisie = imagesTest.get(0);
-		while (imageChoisie.donnees() == null) { // Sécurité anti-crash
-			Image.melange(imagesTest);
-			imageChoisie = imagesTest.get(0);
+		// On mélange et on prend un fichier au hasard
+		Collections.shuffle(fichiersTest);
+		String cheminChoisi = fichiersTest.get(0);
+		
+		// On déduit le vrai label à partir du nom du fichier
+		int vraiLabelAttendu = cheminChoisi.contains("cat") ? 0 : (cheminChoisi.contains("dog") ? 1 : 2);
+		String vraiNomAnimal = (vraiLabelAttendu == 0) ? "CHAT" : (vraiLabelAttendu == 1 ? "CHIEN" : "WILD");
+
+		// On crée notre objet Image
+		Image imageChoisie = new Image(cheminChoisi, vraiLabelAttendu, true);
+		
+		if (imageChoisie.donnees() == null) {
+			System.out.println("Image corrompue piochée, relancez le programme !");
+			return;
 		}
 
 		float[] pixelsNormalises = imageChoisie.donneesNormalisees();
 
-		// 2. CRÉATION D'UN NEURONE "VIDE" ET AMNÉSIQUE
+		// 2. CRÉATION D'UN NEURONE "VIDE" 
 		iNeurone monIA = new NeuroneSigmoide(pixelsNormalises.length);
 
-		// 3. LE MIRACLE : On charge les connaissances au lieu d'apprendre !
-		System.out.println("Chargement du cerveau depuis le fichier...");
-		monIA.chargement("cerveau_binaire.txt"); // /!\ Assure-toi que ce fichier existe bien dans ton dossier !
+		// 3. CHARGEMENT DES POIDS SYNAPTIQUES
+		System.out.println("Chargement du cerveau depuis 'cerveau_binaire.txt'...");
+		monIA.chargement("cerveau_binaire.txt");
 
-		// 4. L'IA FAIT SA PRÉDICTION INSTANTANÉMENT
+		// 4. L'IA FAIT SA PRÉDICTION
 		monIA.metAJour(pixelsNormalises);
 		float probabilite = monIA.sortie();
 
-		// 5. AFFICHAGE DES RÉSULTATS
-		String vraiLabel = (imageChoisie.label() == 0) ? "CHAT" : "CHIEN";
-		System.out.println("\n------------------------------------------------");
-		System.out.println("Vraie réponse attendue   : " + vraiLabel);
-		System.out.printf("L'IA pense que c'est un Chat à : %.2f %%\n", (probabilite * 100));
+		String decisionIA = (probabilite >= 0.5f) ? "CHAT 🐱" : "CHIEN 🐶";
+
+		// 5. AFFICHAGE DES RÉSULTATS DANS LE TERMINAL
+		System.out.println("\n================================================");
+		System.out.println("Vraie réponse attendue   : " + vraiNomAnimal);
+		System.out.printf("Confiance pour un Chat   : %.2f %%\n", (probabilite * 100));
+		System.out.println(">>> DÉCISION DE L'IA     : " + decisionIA + " <<<");
+		System.out.println("================================================");
 		
-		if (probabilite >= 0.5f) {
-			System.out.println(">>> DÉCISION DE L'IA : C'est un CHAT ! 🐱 <<<");
-		} else {
-			System.out.println(">>> DÉCISION DE L'IA : C'est un CHIEN ! 🐶 <<<");
-		}
-		System.out.println("------------------------------------------------");
+		// LE LIEN POUR VOIR L'IMAGE (Ctrl + Clic dans VS Code)
+		System.out.println("\nPour vérifier, ouvrez ce fichier (Ctrl + Clic) :");
+		System.out.println(cheminChoisi);
+		System.out.println("================================================\n");
 	}
 }
