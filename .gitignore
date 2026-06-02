@@ -1,19 +1,19 @@
-# Fichiers compilés Java
-*.class
-
-# Dossiers d'éditeurs de code (pour éviter les conflits si certains utilisent Eclipse et d'autres VSCode)
-.idea/
-.vscode/
-*.iml
-*.project
-*.classpath
-*.settings/
-
-# Le dataset d'images (CRITIQUE : ne doit pas être versionné ni rendu)
+# 1. Dossier de données lourd (Images)
 dataset_animaux/
-*.jpg
-*.png
 
-# Fichiers de log ou systèmes
-.DS_Store
+# 2. Fichiers compilés Java (Générés automatiquement par javac)
+*.class
+neurone/*.class
+
+# 3. Sauvegardes des poids du réseau de neurones (Modèles entraînés)
+cerveau_*.txt
+*.txt
+
+# 4. Configurations locales des IDE (VS Code, IntelliJ, Eclipse)
+.vscode/
+.idea/
+*.iml
+
+# 5. Fichiers systèmes temporaires (Windows/Mac)
 Thumbs.db
+.DS_Store
