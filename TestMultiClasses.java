@@ -54,14 +54,17 @@ public class TestMultiClasses
 		System.out.println("\n--- Entraînement du Neurone Spécialiste CHAT ---");
 		iNeurone neuroneChat = new NeuroneSigmoide(nbEntreesNeurone);
 		neuroneChat.apprentissage(entreesArray, consignesChat, MSElimite);
+		neuroneChat.sauvegarde("cerveau_chat.txt"); // <-- AJOUT DE LA SAUVEGARDE
 
 		System.out.println("\n--- Entraînement du Neurone Spécialiste CHIEN ---");
 		iNeurone neuroneChien = new NeuroneSigmoide(nbEntreesNeurone);
 		neuroneChien.apprentissage(entreesArray, consignesChien, MSElimite);
+		neuroneChien.sauvegarde("cerveau_chien.txt"); // <-- AJOUT DE LA SAUVEGARDE
 
 		System.out.println("\n--- Entraînement du Neurone Spécialiste WILD ---");
 		iNeurone neuroneWild = new NeuroneSigmoide(nbEntreesNeurone);
 		neuroneWild.apprentissage(entreesArray, consignesWild, MSElimite);
+		neuroneWild.sauvegarde("cerveau_wild.txt"); // <-- AJOUT DE LA SAUVEGARDE
 
 		// 3. ÉVALUATION COMPLÈTE SUR LE JEU DE TEST (3 200 IMAGES)
 		System.out.println("\n--- ÉVALUATION GLOBALE SUR LE JEU DE TEST ---");

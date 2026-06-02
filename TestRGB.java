@@ -80,10 +80,13 @@ public class TestRGB
 		System.out.println("Le réseau aura " + nbEntreesNeurone + " synapses (3 par pixel).");
 		
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.20f; 
+		final float MSElimite = 0.10f;
 		
 		System.out.println("Début de l'apprentissage (Attention, cela sera plus long en RGB)...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
+
+		// --- AJOUT DE LA SAUVEGARDE ---
+		neurone.sauvegarde("cerveau_rgb.txt");
 		
 		// --- 5. PHASE DE TEST DIRECTE ---
 		System.out.println("\n--- ÉVALUATION DU MODÈLE RGB SUR LE JEU DE TEST ---");

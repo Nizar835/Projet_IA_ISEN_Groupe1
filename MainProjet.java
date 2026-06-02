@@ -75,11 +75,14 @@ public class MainProjet
 		
 		// Instanciation du neurone Sigmoïde (robuste au bruit)
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.15f; 
+		final float MSElimite = 0.10f; 
 		
 		System.out.println("Début de l'apprentissage supervisé sur " + entreesArray.length + " images (originales + miroirs)...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
 		System.out.println(">>> Apprentissage terminé avec succès ! <<<");
+
+		// --- AJOUT DE LA SAUVEGARDE ---
+		neurone.sauvegarde("cerveau_binaire.txt");
 		
 		// --- 4. PHASE DE TEST (ÉVALUATION GLOBALE) ---
 		System.out.println("\n--- DÉMONSTRATION : ÉVALUATION SUR LE JEU DE TEST ---");
