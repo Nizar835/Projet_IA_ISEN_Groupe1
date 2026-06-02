@@ -1,5 +1,6 @@
 import java.util.List;
 import java.util.ArrayList;
+import java.util.Collections;
 
 public class MainProjet 
 {
@@ -7,117 +8,73 @@ public class MainProjet
 	{
 		System.out.println("--- DÉMARRAGE DE LA CHAÎNE DE TRAITEMENT ---");
 		
-		// --- 1. LECTURE, LABELLISATION ET MÉLANGE (TRAIN) ---
-		System.out.println("Lecture et labellisation du dataset d'entraînement...");
-		List<Image> imagesTrain = Image.chargeDataset("dataset_animaux/train/", true);
+		// 1. Définir le chemin vers le dossier d'entraînement
+		String dossierTrain = "dataset_animaux/train/";
 		
-		if (imagesTrain == null || imagesTrain.isEmpty()) {
-			System.out.println("Erreur : Aucune image d'entraînement trouvée.");
+		// Récupérer la liste de tous les chemins d'images
+		List<String> cheminsFichiers = Image.listeFichiers(dossierTrain);
+		
+		if (cheminsFichiers == null || cheminsFichiers.isEmpty()) {
+			System.out.println("Erreur : Aucune image trouvée. Vérifie le dossier dataset_animaux.");
 			return;
 		}
 
-		System.out.println("Mélange des données d'entraînement...");
-		Image.melange(imagesTrain);
-		
-		// --- 2. EXTRACTION, NORMALISATION ET AUGMENTATION (MIROIR) ---
+		// Préparation des listes dynamiques pour stocker les entrées (pixels) et résultats attendus (labels)
 		List<float[]> listeEntrees = new ArrayList<>();
 		List<Float> listeResultats = new ArrayList<>();
 		
-		System.out.println("Normalisation et création des images miroirs (Niveau 3)...");
+		System.out.println("Lecture, labellisation et normalisation de " + cheminsFichiers.size() + " images...");
 
-		for (Image img : imagesTrain) 
+		// 2. Parcourir chaque fichier
+		for (String chemin : cheminsFichiers) 
 		{
-			// BOUCLIER ANTI-CRASH : On ignore l'image si elle est corrompue
-			if (img.donnees() == null) {
-				continue; 
+			// Labellisation : 1 si c'est un chat, 0 si ce n'est pas un chat
+			int labelAttendu = chemin.contains("cat") ? 1 : 0;
+			
+			// Chargement de l'image en niveaux de gris (true)
+			Image img = new Image(chemin, labelAttendu, true);
+			
+			// Récupération des pixels bruts (de 0 à 255)
+			int[] pixelsBruts = img.donnees();
+			float[] pixelsNormalises = new float[pixelsBruts.length];
+			
+			// 3. Normalisation : diviser par 255 pour avoir des valeurs entre 0 et 1
+			for (int i = 0; i < pixelsBruts.length; i++) {
+				pixelsNormalises[i] = pixelsBruts[i] / 255.0f;
 			}
 			
-			// Le neurone attend 1 pour un chat, 0 pour le reste.
-			float labelPourNeurone = (img.label() == 0) ? 1.0f : 0.0f;
-
-			// A. On ajoute l'image normale
-			listeEntrees.add(img.donneesNormalisees());
-			listeResultats.add(labelPourNeurone);
-
-			// B. On ajoute l'image inversée (Filtre Miroir)
-			int[] pixelsBruts = img.donnees(); 
-			float[] pixelsFloat = new float[pixelsBruts.length];
-			for(int i = 0; i < pixelsBruts.length; i++) {
-				pixelsFloat[i] = (float)pixelsBruts[i];
-			}
-			
-			// On applique le filtre de votre classe FiltreImage
-			float[] miroir = FiltreImage.miroirGris(pixelsFloat, img.largeur(), img.hauteur());
-			
-			// On normalise le miroir (division par 255)
-			for(int i = 0; i < miroir.length; i++) {
-				miroir[i] /= 255.0f;
-			}
-
-			listeEntrees.add(miroir);
-			listeResultats.add(labelPourNeurone); // Le miroir d'un chat reste un chat
+			// Ajout aux listes
+			listeEntrees.add(pixelsNormalises);
+			listeResultats.add((float) labelAttendu);
 		}
 		
-		// --- 3. ENTRAÎNEMENT DU NEURONE ---
-		System.out.println("Conversion des données et instanciation du réseau...");
+		System.out.println("Données prêtes !");
 		
-		float[][] entreesArray = new float[listeEntrees.size()][];
+		// --- 4. MÉLANGE DES DONNÉES ---
+		System.out.println("Mélange des données d'entraînement...");
+		
+		// Création d'une liste d'index (0, 1, 2, ..., N-1)
+		List<Integer> indexList = new ArrayList<>();
 		for (int i = 0; i < listeEntrees.size(); i++) {
-			entreesArray[i] = listeEntrees.get(i);
+			indexList.add(i);
 		}
 		
-		float[] resultatsArray = new float[listeResultats.size()];
-		for (int i = 0; i < listeResultats.size(); i++) {
-			resultatsArray[i] = listeResultats.get(i);
+		// Mélange aléatoire des index
+		Collections.shuffle(indexList);
+		
+		// Création de nouvelles listes pour stocker les données dans le nouvel ordre
+		List<float[]> entreesMelangees = new ArrayList<>();
+		List<Float> resultatsMelanges = new ArrayList<>();
+		
+		for (int index : indexList) {
+			entreesMelangees.add(listeEntrees.get(index));
+			resultatsMelanges.add(listeResultats.get(index));
 		}
 		
-		int nbEntreesNeurone = entreesArray[0].length;
+		// Remplacement des anciennes listes par les nouvelles bien mélangées
+		listeEntrees = entreesMelangees;
+		listeResultats = resultatsMelanges;
 		
-		// Instanciation du neurone Sigmoïde (robuste au bruit)
-		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.15f; 
-		
-		System.out.println("Début de l'apprentissage supervisé sur " + entreesArray.length + " images (originales + miroirs)...");
-		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
-		System.out.println(">>> Apprentissage terminé avec succès ! <<<");
-		
-		// --- 4. PHASE DE TEST (ÉVALUATION GLOBALE) ---
-		System.out.println("\n--- DÉMONSTRATION : ÉVALUATION SUR LE JEU DE TEST ---");
-		System.out.println("Chargement du dataset de test...");
-		
-		List<Image> imagesTest = Image.chargeDataset("dataset_animaux/test/", true);
-		
-		if (imagesTest != null && !imagesTest.isEmpty()) {
-			
-			int bonnesReponses = 0;
-			int totalTest = 0;
-
-			System.out.println("Passage de l'examen final sur toutes les images inédites...");
-
-			for (Image imgTest : imagesTest) 
-			{
-				if (imgTest.donnees() == null) continue; // Sécurité
-				
-				// On donne l'image au réseau
-				neurone.metAJour(imgTest.donneesNormalisees());
-				float proba = neurone.sortie();
-				
-				// On vérifie le résultat
-				float vraiLabel = (imgTest.label() == 0) ? 1.0f : 0.0f;
-				float reponseArrondie = (proba >= 0.5f) ? 1.0f : 0.0f;
-				
-				if (reponseArrondie == vraiLabel) {
-					bonnesReponses++;
-				}
-				totalTest++;
-			}
-			
-			// Calcul et affichage du score
-			float pourcentage = ((float) bonnesReponses / totalTest) * 100.0f;
-			System.out.printf("\n>>> SCORE FINAL DE L'IA : %.2f %% de réussite (%d/%d) <<<\n", pourcentage, bonnesReponses, totalTest);
-			
-		} else {
-			System.out.println("Dossier de test introuvable ou vide.");
-		}
+		System.out.println("Mélange terminé ! Les labels correspondent toujours aux bonnes images.");
 	}
 }
