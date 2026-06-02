@@ -35,14 +35,8 @@ public class TestRGB
 				continue;
 			}
 			
-			// --- 2. NORMALISATION ---
-			int[] pixelsBruts = img.donnees();
-			float[] pixelsNormalises = new float[pixelsBruts.length];
-			
-			for (int i = 0; i < pixelsBruts.length; i++) {
-				pixelsNormalises[i] = pixelsBruts[i] / 255.0f;
-			}
-			
+			// --- 2. NORMALISATION (Appel propre de la méthode) ---
+			float[] pixelsNormalises = img.donneesNormalisees();
 			listeEntrees.add(pixelsNormalises);
 			listeResultats.add((float) labelAttendu);
 		}
@@ -80,13 +74,10 @@ public class TestRGB
 		System.out.println("Le réseau aura " + nbEntreesNeurone + " synapses (3 par pixel).");
 		
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.10f;
+		final float MSElimite = 0.05f; 
 		
 		System.out.println("Début de l'apprentissage (Attention, cela sera plus long en RGB)...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
-
-		// --- AJOUT DE LA SAUVEGARDE ---
-		neurone.sauvegarde("cerveau_rgb.txt");
 		
 		// --- 5. PHASE DE TEST DIRECTE ---
 		System.out.println("\n--- ÉVALUATION DU MODÈLE RGB SUR LE JEU DE TEST ---");
@@ -108,11 +99,9 @@ public class TestRGB
 			}
 			
 			totalTestSains++;
-			int[] pixelsBrutsTest = imgTest.donnees();
-			float[] pixelsNormalisesTest = new float[pixelsBrutsTest.length];
-			for (int i = 0; i < pixelsBrutsTest.length; i++) {
-				pixelsNormalisesTest[i] = pixelsBrutsTest[i] / 255.0f;
-			}
+			
+			// --- NORMALISATION TEST (Appel propre de la méthode) ---
+			float[] pixelsNormalisesTest = imgTest.donneesNormalisees();
 			
 			neurone.metAJour(pixelsNormalisesTest);
 			int labelPredit = (neurone.sortie() > 0.5f) ? 1 : 0;
