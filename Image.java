@@ -7,7 +7,8 @@ import java.util.stream.*;
 
 public class Image
 {
-    static public int LabelChat = 0; // Modifié en public pour être accessible depuis testNeurone si besoin
+    // Modifié en public pour être accessible depuis testNeurone si besoin
+    static public int LabelChat = 0; 
     static public int LabelChien = 1;
     static public int LabelWild = 2;
     static public int LabelInconnu = 3;
@@ -15,26 +16,28 @@ public class Image
     private int label = -1;
     private int largeur = 0;
     private int hauteur = 0;
-    private int[] donnees = null; // image applatie en concaténant les lignes les unes après les autres
+    private int[] donnees = null; // image aplatie en concaténant les lignes
 
     public int label() {return label;}
     public int largeur() {return largeur;}
     public int hauteur() {return hauteur;}
-    public int taille() {return donnees.length;} // nombre de pixels: hauteur*largeur ou 3*hauteur*largeur pour une image RGB
+    public int taille() {return donnees.length;} // 1 canal (gris) ou 3 canaux (RGB)
     public int[] donnees() {return donnees;}
 
-<<<<<<< HEAD
-    public boolean estEnNiveauxDeGris() {return taille() == largeur() * hauteur();}
-=======
-	public boolean estEnNiveauxDeGris() {return taille() == largeur() * hauteur();}
-// Normalise les pixels de 0-255 vers 0.0-1.0 pour le neurone
- public float[] donneesNormalisees() {
-    float[] normalise = new float[donnees.length];
-    for (int i = 0; i < donnees.length; i++)
-        normalise[i] = donnees[i] / 255.0f;
-    return normalise;
- }
->>>>>>> 8735f2b91868032f3868d0c7d80c39d6acf31c39
+    public boolean estEnNiveauxDeGris() {
+        return taille() == largeur() * hauteur();
+    }
+
+    // Normalise les pixels de 0-255 vers 0.0-1.0 pour le neurone
+    public float[] donneesNormalisees() {
+        if (this.donnees == null) return new float[0]; // Protection anti-crash
+        
+        float[] normalise = new float[donnees.length];
+        for (int i = 0; i < donnees.length; i++) {
+            normalise[i] = donnees[i] / 255.0f;
+        }
+        return normalise;
+    }
 
     public void afficheMetadonnees() {
         String type = estEnNiveauxDeGris() ? "grayscale" : " couleurs";
@@ -42,7 +45,6 @@ public class Image
             type, label(), largeur(), hauteur(), taille());
     }
 
-<<<<<<< HEAD
     public Image(final String cheminImage, int label, boolean niveauxDeGris) {
         try {
             final BufferedImage img = ImageIO.read(new File(cheminImage));
@@ -51,6 +53,7 @@ public class Image
             hauteur = img.getHeight(null);
             final int taille = niveauxDeGris ? hauteur*largeur : 3*hauteur*largeur;
             donnees = new int[taille];
+            
             for (int i = 0; i < hauteur; ++i) {
                 for (int j = 0; j < largeur; ++j) {
                     final long rgb = img.getRGB(j, i);
@@ -58,6 +61,7 @@ public class Image
                     final int g = (int)((rgb>>8)&255);  // Isoler la composante verte
                     final int b = (int)((rgb)&255);     // Isoler la composante bleue
                     final int index = i * largeur + j;
+                    
                     if (niveauxDeGris) {
                         final float gris = 0.2125f * r + 0.7154f * g + 0.0721f * b; // RGB -> niveaux de gris
                         donnees[index] = (int) Math.max(0, Math.min(255, gris));
@@ -71,87 +75,39 @@ public class Image
             }
         }
         catch (Exception e) {
-            e.printStackTrace();
             System.err.printf("Image non trouvée ou non lisible: %s\n", cheminImage);
         }
     }
-=======
-	public Image(final String cheminImage, int label, boolean niveauxDeGris) {
-		try {
-			final BufferedImage img = ImageIO.read(new File(cheminImage));
-			this.label = label;
-			largeur = img.getWidth(null);
-			hauteur = img.getHeight(null);
-			final int taille = niveauxDeGris ? hauteur*largeur : 3*hauteur*largeur;
-			donnees = new int[taille];
-			for (int i = 0; i < hauteur; ++i) {
-				for (int j = 0; j < largeur; ++j) {
-					final long rgb = img.getRGB(j, i);
-					final int r = (int)((rgb>>16)&255);	// Isoler la composante rouge
-					final int g = (int)((rgb>>8)&255);	// Isoler la composante verte
-					final int b = (int)((rgb)&255);		// Isoler la composante bleue
-					final int index = i * largeur + j;
-					if (niveauxDeGris) {
-						final float gris = 0.2125f * r + 0.7154f * g + 0.0721f * b; // RGB -> niveaux de gris
-						donnees[index] = (int) Math.max(0, Math.min(255, gris));
-					}
-					else {
-						donnees[3*index+0] = r;
-						donnees[3*index+1] = g;
-						donnees[3*index+2] = b;
-					}
-				}
-			}
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			System.err.printf("Image non trouvée ou non lisible: %s\n", cheminImage);
-		}
-	}
-     // Charge toutes les images d'un dossier avec leur label automatique
-public static List<Image> chargeDataset(String repertoire, boolean niveauxDeGris) {
-    List<Image> images = new ArrayList<>();
-    List<String> fichiers = listeFichiers(repertoire);
-    for (String chemin : fichiers) {
-        int label = chemin.contains("cat") ? LabelChat :
-                    chemin.contains("dog") ? LabelChien :
-                    chemin.contains("wild") ? LabelWild : LabelInconnu;
-        images.add(new Image(chemin, label, niveauxDeGris));
-    }
-    return images;
-}
 
- // Mélange aléatoirement la liste d'images
- public static void melange(List<Image> images) {
-    Collections.shuffle(images);
- }
->>>>>>> 8735f2b91868032f3868d0c7d80c39d6acf31c39
-
-    // =========================================================================
-    // NOUVELLE MÉTHODE : NORMALISATION DU SIGNAL POUR LE NEURONE
-    // =========================================================================
-    public float[] getPixelsNormalises() {
-        if (this.donnees == null) return new float[0];
+    // Charge toutes les images d'un dossier avec leur label automatique
+    public static List<Image> chargeDataset(String repertoire, boolean niveauxDeGris) {
+        List<Image> images = new ArrayList<>();
+        List<String> fichiers = listeFichiers(repertoire);
         
-        float[] pixelsNormalises = new float[donnees.length];
-        for (int i = 0; i < donnees.length; i++) {
-            // Division par 255.0f pour ramener l'amplitude entre 0.0 et 1.0
-            pixelsNormalises[i] = (float) donnees[i] / 255.0f; 
+        if (fichiers != null) {
+            for (String chemin : fichiers) {
+                int label = chemin.contains("cat") ? LabelChat :
+                            chemin.contains("dog") ? LabelChien :
+                            chemin.contains("wild") ? LabelWild : LabelInconnu;
+                images.add(new Image(chemin, label, niveauxDeGris));
+            }
         }
-        return pixelsNormalises;
+        return images;
     }
-    // =========================================================================
 
-<<<<<<< HEAD
+    // Mélange aléatoirement la liste d'images
+    public static void melange(List<Image> images) {
+        Collections.shuffle(images);
+    }
+
     public static List<String> listeFichiers(String repertoire) {
         List<String> cheminsFichiers = null;
         try {
-            // La syntaxe qui suit enchaîne plusieurs méthodes d'affilée
-            cheminsFichiers = Files.walk(Paths.get(repertoire)) // Récupère les chemins
-                .filter(Files::isRegularFile)                   // filtre uniquement les fichiers
-                .map(Path::toAbsolutePath)                      // convertit le chemin en chemin absolu
-                .map(Path::toString)                            // convertit le chemin en chaine de caractères
-                .collect(Collectors.toList());                  // crée une collection à partir de ces chaînes
+            cheminsFichiers = Files.walk(Paths.get(repertoire)) 
+                .filter(Files::isRegularFile)                   
+                .map(Path::toAbsolutePath)                      
+                .map(Path::toString)                            
+                .collect(Collectors.toList());                  
         } catch (Exception e) {
             System.err.println("Dossier introuvable ou vide : " + repertoire);
         }
@@ -160,42 +116,13 @@ public static List<Image> chargeDataset(String repertoire, boolean niveauxDeGris
 
     public static void main (String[] args)
     {
-        // Test basique pour vérifier que la classe liste bien les fichiers
-        List<String> cheminsFichiers = listeFichiers("dataset_animaux/");
-        if (cheminsFichiers != null && !cheminsFichiers.isEmpty()) {
-            for (int i = 0; i < Math.min(5, cheminsFichiers.size()); i++) {
-                System.out.println("Fichier trouvé : " + cheminsFichiers.get(i));
-            }
-        }
-
-        // Test de l'instanciation et de la normalisation sur une image
-        final String chemin = "dataset_animaux/train/dog/010552.jpg";
-        File testFile = new File(chemin);
-        
-        if(testFile.exists() && !testFile.isDirectory()) {
-            final int labelImage = chemin.indexOf("dog") != -1 ? LabelChien : LabelInconnu;
-            Image im1 = new Image(chemin, labelImage, false);
-            Image im2 = new Image(chemin, labelImage, true); // En niveaux de gris
-            
-            im1.afficheMetadonnees();
-            im2.afficheMetadonnees();
-            
-            // Test de la nouvelle fonction
-            float[] pixels = im2.getPixelsNormalises();
-            System.out.println("Test de normalisation OK. Exemple du pixel 0 : " + pixels[0]);
+        List<Image> images = chargeDataset("dataset_animaux/train/", true);
+        if (images != null && !images.isEmpty()) {
+            melange(images);
+            System.out.println("Nombre d'images chargées : " + images.size());
+            images.get(0).afficheMetadonnees();
         } else {
-            System.out.println("\n[!] Info : L'image de test " + chemin + " n'a pas été trouvée.");
-            System.out.println("Assurez-vous d'avoir extrait le dataset Kaggle dans le bon dossier avant de lancer l'apprentissage global.");
+            System.out.println("Aucune image trouvée pour le test de la classe.");
         }
     }
 }
-=======
-	public static void main (String[] args)
-	{
-		List<Image> images = chargeDataset("dataset_animaux/train/", true);
-melange(images);
-System.out.println("Nombre d'images chargées : " + images.size());
-images.get(0).afficheMetadonnees();
-	}
-}
->>>>>>> 8735f2b91868032f3868d0c7d80c39d6acf31c39
