@@ -41,7 +41,10 @@ public class TestSansMelange
 		
 		System.out.println("Début de l'apprentissage SANS mélange...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
-		System.out.println(">>> Apprentissage terminé ! <<<");
+		
+		// --- LA SAUVEGARDE EST AJOUTÉE ICI ---
+		neurone.sauvegarde("cerveau_sans_melange.txt");
+		System.out.println(">>> Apprentissage terminé et cerveau sauvegardé ! <<<");
 		
 		System.out.println("\n--- ÉVALUATION SUR LE JEU DE TEST ---");
 		List<Image> imagesTest = Image.chargeDataset("dataset_animaux/test/", true);

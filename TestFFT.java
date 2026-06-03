@@ -73,7 +73,7 @@ public class TestFFT
         
         int nbEntreesNeurone = entreesArray[0].length;
         iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-        final float MSElimite = 0.08f; 
+        final float MSElimite = 0.20f; 
         
         System.out.println("Début de l'apprentissage sur les spectres fréquentiels...");
         neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
