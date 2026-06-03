@@ -82,7 +82,7 @@ public class TestTSL
         
         int nbEntreesNeurone = entreesArray[0].length;
         iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-        final float MSElimite = 0.15f; 
+        final float MSElimite = 0.08f; 
         
         System.out.println("Début de l'apprentissage (Attention, c'est très lourd : il y a 3 canaux de couleur !)...");
         neurone.apprentissage(entreesArray, resultatsArray, MSElimite);

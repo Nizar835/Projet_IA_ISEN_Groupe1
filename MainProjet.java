@@ -57,7 +57,7 @@ public class MainProjet
 		
 		// Instanciation du neurone Sigmoïde (robuste au bruit)
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.15f; 
+		final float MSElimite = 0.05f; 
 		
 		System.out.println("Début de l'apprentissage supervisé sur " + entreesArray.length + " images originales...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);

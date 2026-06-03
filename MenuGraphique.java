@@ -17,20 +17,27 @@ public class MenuGraphique extends JFrame {
     private JLabel imageLabel;
     private JLabel resultLabel;
     private JButton[] actionButtons; 
-    private JTextField etaField;
     
+    // Nouveaux boutons extraits pour pouvoir les désactiver
+    private JButton btnTesterImage;
+    private JButton btnTesterAleatoire;
+    private JButton btnUsine;
+
+    private JTextField etaField;
     private JComboBox<String> comboModele1; 
     private JComboBox<String> comboModele2;
     private JCheckBox cbFusion;
 
-    // --- PALETTE DE COULEURS ULTRA-MODERNE ---
+    // --- PALETTE DE COULEURS ---
     private final Color BG_COLOR = new Color(30, 30, 30);
     private final Color PANEL_BG = new Color(37, 37, 38);
     private final Color BUTTON_BG = new Color(63, 63, 70);
     private final Color TEXT_COLOR = new Color(240, 240, 240);
     private final Color ACCENT_BLUE = new Color(0, 122, 204);
-    private final Color SUCCESS_GREEN = new Color(76, 175, 80);
+    private final Color SUCCESS_GREEN = new Color(46, 204, 113); 
+    private final Color ERROR_RED = new Color(231, 76, 60);     
     private final Color WARNING_ORANGE = new Color(255, 152, 0);
+    private final Color FACTORY_PURPLE = new Color(142, 68, 173); // Couleur pour l'Usine
 
     public MenuGraphique() {
         setTitle("🧠 Dashboard IA Pro - L'Intégrale (Groupe 1)");
@@ -77,10 +84,10 @@ public class MenuGraphique extends JFrame {
         add(panelConfig, BorderLayout.NORTH);
 
         // =========================================================
-        // GAUCHE : LANCEURS D'ENTRAÎNEMENT (Maintenant 9 options !)
+        // GAUCHE : LANCEURS D'ENTRAÎNEMENT (Maintenant 10 boutons)
         // =========================================================
         JPanel panelMenu = creerPanneauStyle("1. Entraînements (Création des cerveaux)");
-        panelMenu.setLayout(new GridLayout(9, 1, 10, 8)); // Modifié pour 9 boutons
+        panelMenu.setLayout(new GridLayout(10, 1, 10, 8)); // 10 emplacements !
         panelMenu.setPreferredSize(new Dimension(320, 0));
 
         actionButtons = new JButton[]{
@@ -96,6 +103,12 @@ public class MenuGraphique extends JFrame {
         };
 
         for (JButton btn : actionButtons) panelMenu.add(btn);
+
+        // --- NOUVEAUTÉ : LE BOUTON USINE ---
+        btnUsine = creerBoutonStyle("🚀 TOUT ENTRAÎNER (L'Usine)", FACTORY_PURPLE);
+        btnUsine.addActionListener(e -> lancerUsineSequentielle());
+        panelMenu.add(btnUsine);
+
         add(panelMenu, BorderLayout.WEST);
 
         // =========================================================
@@ -113,7 +126,6 @@ public class MenuGraphique extends JFrame {
         lblM1.setFont(new Font("Segoe UI", Font.BOLD, 12));
         panelOptionsTest.add(lblM1);
         
-        // --- LA LISTE DES MODÈLES AVEC LE TSL ---
         String[] modelesListe = {
             "Base (cerveau_binaire.txt)", "Multi-Classes (chat, chien, wild)", 
             "Couleur RGB (cerveau_rgb.txt)", "Couleur TSL (cerveau_tsl.txt)", 
@@ -154,11 +166,11 @@ public class MenuGraphique extends JFrame {
         JPanel panelBoutonsTest = new JPanel(new GridLayout(2, 1, 10, 10));
         panelBoutonsTest.setOpaque(false);
 
-        JButton btnTesterImage = creerBoutonStyle("🔍 Tester une Image Ciblée", ACCENT_BLUE);
+        btnTesterImage = creerBoutonStyle("🔍 Tester une Image Ciblée", ACCENT_BLUE);
         btnTesterImage.setPreferredSize(new Dimension(0, 60));
         btnTesterImage.addActionListener(e -> testerImageManuel());
         
-        JButton btnTesterAleatoire = creerBoutonStyle("🎲 Lancer Animation (10 Images Aléatoires)", WARNING_ORANGE);
+        btnTesterAleatoire = creerBoutonStyle("🎲 Lancer Animation (10 Images Aléatoires)", WARNING_ORANGE);
         btnTesterAleatoire.setPreferredSize(new Dimension(0, 60));
         btnTesterAleatoire.addActionListener(e -> lancerTestAleatoireAnime());
 
@@ -206,12 +218,12 @@ public class MenuGraphique extends JFrame {
 
         redirigerConsole();
 
-        // Assignation multi-thread
+        // Assignation multi-thread individuelle
         actionButtons[0].addActionListener(e -> lancerTacheSecurisee(() -> MainProjet.main(new String[]{})));
         actionButtons[1].addActionListener(e -> lancerTacheSecurisee(() -> TestMultiClasses.main(new String[]{})));
         actionButtons[2].addActionListener(e -> lancerTacheSecurisee(() -> TestMiroir.main(new String[]{})));
         actionButtons[3].addActionListener(e -> lancerTacheSecurisee(() -> TestRGB.main(new String[]{})));
-        actionButtons[4].addActionListener(e -> lancerTacheSecurisee(() -> TestTSL.main(new String[]{}))); // Nouveau TSL
+        actionButtons[4].addActionListener(e -> lancerTacheSecurisee(() -> TestTSL.main(new String[]{}))); 
         actionButtons[5].addActionListener(e -> lancerTacheSecurisee(() -> TestFFT.main(new String[]{})));
         actionButtons[6].addActionListener(e -> lancerTacheSecurisee(() -> TestSansMelange.main(new String[]{})));
         actionButtons[7].addActionListener(e -> lancerTacheSecurisee(() -> TestSansNormalisation.main(new String[]{})));
@@ -219,7 +231,78 @@ public class MenuGraphique extends JFrame {
     }
 
     // =====================================================================
-    // UTILITAIRES DE DESIGN
+    // SYSTÈME DE VERROUILLAGE ANTI-SUPERPOSITION (NOUVEAUTÉ)
+    // =====================================================================
+    private void setBoutonsActifs(boolean actif) {
+        for (JButton btn : actionButtons) btn.setEnabled(actif);
+        btnUsine.setEnabled(actif);
+        btnTesterImage.setEnabled(actif);
+        btnTesterAleatoire.setEnabled(actif);
+    }
+
+    // =====================================================================
+    // L'USINE (BATCH TRAINING SÉQUENTIEL POUR SAUVER LA RAM)
+    // =====================================================================
+    private void lancerUsineSequentielle() {
+        setBoutonsActifs(false);
+        resultLabel.setText("USINE EN COURS...");
+        resultLabel.setForeground(FACTORY_PURPLE);
+        
+        new Thread(() -> {
+            try {
+                System.out.println("\n=======================================================");
+                System.out.println("🚀 DÉMARRAGE DE L'USINE (Génération de tous les cerveaux)");
+                System.out.println("=======================================================\n");
+
+                MainProjet.main(new String[]{});
+                System.gc(); // Forcer le nettoyage de la RAM
+                Thread.sleep(1000);
+
+                TestMultiClasses.main(new String[]{});
+                System.gc();
+                Thread.sleep(1000);
+
+                TestMiroir.main(new String[]{});
+                System.gc();
+                Thread.sleep(1000);
+
+                TestRGB.main(new String[]{});
+                System.gc();
+                Thread.sleep(1000);
+
+                TestTSL.main(new String[]{});
+                System.gc();
+                Thread.sleep(1000);
+
+                TestFFT.main(new String[]{});
+                System.gc();
+                Thread.sleep(1000);
+                
+                TestSansMelange.main(new String[]{});
+                System.gc();
+                Thread.sleep(1000);
+                
+                TestSansNormalisation.main(new String[]{});
+
+                System.out.println("\n=======================================================");
+                System.out.println("✅ USINE TERMINÉE : TOUS LES CERVEAUX SONT PRÊTS !");
+                System.out.println("=======================================================\n");
+
+            } catch (Exception ex) {
+                System.out.println("❌ Erreur critique dans l'usine : " + ex.getMessage());
+            } finally {
+                SwingUtilities.invokeLater(() -> {
+                    setBoutonsActifs(true);
+                    resultLabel.setText("USINE TERMINÉE");
+                    resultLabel.setForeground(SUCCESS_GREEN);
+                    JOptionPane.showMessageDialog(this, "La production est terminée.\nTous les fichiers .txt sont à jour !", "Usine IA", JOptionPane.INFORMATION_MESSAGE);
+                });
+            }
+        }).start();
+    }
+
+    // =====================================================================
+    // UTILITAIRES DE DESIGN ET REDIRECTION
     // =====================================================================
     private JPanel creerPanneauStyle(String titre) {
         JPanel p = new JPanel();
@@ -271,14 +354,14 @@ public class MenuGraphique extends JFrame {
     }
 
     private void lancerTacheSecurisee(Runnable tâche) {
-        for (JButton btn : actionButtons) btn.setEnabled(false);
+        setBoutonsActifs(false); // VERROUILLAGE GLOBAL
         resultLabel.setText("CALCULS EN COURS...");
         resultLabel.setForeground(WARNING_ORANGE);
         new Thread(() -> {
             try { tâche.run(); } catch (Exception ex) { System.out.println("Erreur : " + ex.getMessage()); } 
             finally {
                 SwingUtilities.invokeLater(() -> {
-                    for (JButton btn : actionButtons) btn.setEnabled(true);
+                    setBoutonsActifs(true); // DÉVERROUILLAGE GLOBAL
                     resultLabel.setText("PRÊT");
                     resultLabel.setForeground(SUCCESS_GREEN);
                 });
@@ -287,10 +370,9 @@ public class MenuGraphique extends JFrame {
     }
 
     // =====================================================================
-    // ANIMATION FLUIDE
+    // ANIMATION : SECURISÉE CONTRE LES MULTIPLES CLICS
     // =====================================================================
     private void lancerTestAleatoireAnime() {
-        // CORRECTION DU BUG : On utilise listeFichiers(String) directement
         List<String> fichiersTest = Image.listeFichiers("dataset_animaux/test/");
         if (fichiersTest == null || fichiersTest.isEmpty()) {
             System.out.println("❌ Erreur : Dossier de test introuvable.");
@@ -300,28 +382,43 @@ public class MenuGraphique extends JFrame {
         Collections.shuffle(fichiersTest);
         int nbImages = Math.min(10, fichiersTest.size());
 
+        setBoutonsActifs(false); // VERROUILLAGE GLOBAL !
+
         new Thread(() -> {
             try {
                 System.out.println("\n🚀 DÉMARRAGE DU TEST EN RAFALE (10 IMAGES) ...");
                 int scoreTotal = 0;
 
                 for (int i = 0; i < nbImages; i++) {
-                    String chemin = fichiersTest.get(i);
-                    File f = new File(chemin);
+                    String cheminAbsolu = fichiersTest.get(i).toLowerCase();
+                    File f = new File(fichiersTest.get(i));
                     
-                    SwingUtilities.invokeLater(() -> {
-                        try {
-                            BufferedImage bimg = ImageIO.read(f);
+                    try {
+                        final BufferedImage bimg = ImageIO.read(f);
+                        if (bimg == null) continue;
+                        
+                        SwingUtilities.invokeLater(() -> {
                             java.awt.Image scaled = bimg.getScaledInstance(350, 350, java.awt.Image.SCALE_SMOOTH);
                             imageLabel.setIcon(new ImageIcon(scaled));
                             imageLabel.setText("");
-                        } catch (Exception e) {}
-                    });
+                        });
 
-                    int prediction = executerInference(f, cbFusion.isSelected());
-                    int vraiLabel = chemin.contains("cat") ? 0 : (chemin.contains("dog") ? 1 : 2);
+                        int prediction = executerInference(f, cbFusion.isSelected());
+                        
+                        boolean isMulti = comboModele1.getSelectedItem().toString().contains("Multi-Classes");
+                        int vraiLabel;
+                        if (isMulti) {
+                            vraiLabel = cheminAbsolu.contains("cat") ? 0 : (cheminAbsolu.contains("dog") ? 1 : 2);
+                        } else {
+                            vraiLabel = cheminAbsolu.contains("cat") ? 0 : 1;
+                        }
 
-                    if (prediction == vraiLabel) scoreTotal++;
+                        if (prediction == vraiLabel) {
+                            scoreTotal++;
+                        }
+                    } catch (Exception errImage) {
+                        System.out.println("Image ignorée car corrompue : " + f.getName());
+                    }
 
                     Thread.sleep(1200); 
                 }
@@ -333,6 +430,8 @@ public class MenuGraphique extends JFrame {
                     imageLabel.setIcon(null); 
                     
                     String couleurScore = (finalScore >= 6) ? "#4CAF50" : "#FF9800";
+                    if(finalScore < 5) couleurScore = "#E74C3C"; 
+                    
                     String htmlTrophy = "<html><div style='text-align: center; font-family: Segoe UI;'>"
                             + "<h1 style='color: white; font-size: 36px; margin-bottom: 5px;'>🏆 TEST TERMINÉ</h1>"
                             + "<h2 style='color: " + couleurScore + "; font-size: 50px; margin-top: 0px;'>" + (finalScore * 10) + " %</h2>"
@@ -341,11 +440,13 @@ public class MenuGraphique extends JFrame {
                     
                     imageLabel.setText(htmlTrophy);
                     resultLabel.setText("BILAN : " + finalScore + " / " + nbImages);
-                    resultLabel.setForeground(finalScore >= 6 ? SUCCESS_GREEN : WARNING_ORANGE);
+                    resultLabel.setForeground(finalScore >= 5 ? SUCCESS_GREEN : ERROR_RED);
                 });
 
             } catch (Exception ex) {
                 System.out.println("Erreur durant l'animation : " + ex.getMessage());
+            } finally {
+                SwingUtilities.invokeLater(() -> setBoutonsActifs(true)); // DÉVERROUILLAGE GLOBAL A LA FIN
             }
         }).start();
     }
@@ -356,27 +457,53 @@ public class MenuGraphique extends JFrame {
         if (fc.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
         
         File fichierImage = fc.getSelectedFile();
-        try {
-            BufferedImage bimg = ImageIO.read(fichierImage);
-            java.awt.Image scaledImg = bimg.getScaledInstance(350, 350, java.awt.Image.SCALE_SMOOTH);
-            imageLabel.setIcon(new ImageIcon(scaledImg));
-            imageLabel.setText("");
-            
-            executerInference(fichierImage, cbFusion.isSelected());
-        } catch (Exception ex) {
-            System.out.println("Erreur de lecture de l'image.");
-        }
+        
+        setBoutonsActifs(false); // VERROUILLAGE GLOBAL PENDANT L'ANALYSE
+        resultLabel.setText("ANALYSE...");
+        resultLabel.setForeground(WARNING_ORANGE);
+
+        new Thread(() -> {
+            try {
+                BufferedImage bimg = ImageIO.read(fichierImage);
+                SwingUtilities.invokeLater(() -> {
+                    java.awt.Image scaledImg = bimg.getScaledInstance(350, 350, java.awt.Image.SCALE_SMOOTH);
+                    imageLabel.setIcon(new ImageIcon(scaledImg));
+                    imageLabel.setText("");
+                });
+                executerInference(fichierImage, cbFusion.isSelected());
+            } catch (Exception ex) {
+                System.out.println("Erreur de lecture de l'image.");
+            } finally {
+                SwingUtilities.invokeLater(() -> setBoutonsActifs(true)); // DÉVERROUILLAGE
+            }
+        }).start();
     }
 
     // =====================================================================
-    // MOTEUR D'INFÉRENCE GLOBAL
+    // MOTEUR D'INFÉRENCE : CORRECTION DÉFINITIVE DU TEXTE BLEU
     // =====================================================================
     private int executerInference(File fichierImage, boolean avecFusion) {
         try {
             System.out.println("\n--- ANALYSE DE : " + fichierImage.getName() + " ---");
             String mod1 = (String) comboModele1.getSelectedItem();
+            boolean isMulti = mod1.contains("Multi-Classes");
             
-            if (mod1.contains("Multi-Classes")) {
+            if (isMulti && avecFusion) {
+                System.out.println("ℹ️ Fusion ignorée mathématiquement pour le modèle Multi-Classes.");
+                avecFusion = false; 
+            }
+
+            // --- CORRECTION DU BUG BLEU : ON LIT LE CHEMIN ABSOLU ---
+            String cheminAbsolu = fichierImage.getAbsolutePath().toLowerCase();
+            int vraiLabel = -1; 
+            if (cheminAbsolu.contains("cat")) vraiLabel = 0;
+            else if (cheminAbsolu.contains("dog")) vraiLabel = 1;
+            else if (cheminAbsolu.contains("wild")) vraiLabel = 2;
+
+            int prediction = -1;
+            String texteAffiche = "";
+
+            if (isMulti) {
                 float[] pixels = new Image(fichierImage.getAbsolutePath(), Image.LabelInconnu, true).donneesNormalisees();
                 iNeurone nChat = new NeuroneSigmoide(pixels.length); nChat.chargement("cerveau_chat.txt");
                 iNeurone nChien = new NeuroneSigmoide(pixels.length); nChien.chargement("cerveau_chien.txt");
@@ -385,38 +512,51 @@ public class MenuGraphique extends JFrame {
                 float pChat = nChat.sortie(), pChien = nChien.sortie(), pWild = nWild.sortie();
                 
                 if (pChat > pChien && pChat > pWild) {
-                    majUIResultat(String.format("CHAT 🐱 (%.1f%%)", pChat*100), SUCCESS_GREEN); return 0;
+                    texteAffiche = String.format("CHAT 🐱 (%.1f%%)", pChat*100); prediction = 0;
                 } else if (pChien > pChat && pChien > pWild) {
-                    majUIResultat(String.format("CHIEN 🐶 (%.1f%%)", pChien*100), ACCENT_BLUE); return 1;
+                    texteAffiche = String.format("CHIEN 🐶 (%.1f%%)", pChien*100); prediction = 1;
                 } else {
-                    majUIResultat(String.format("WILD 🦁 (%.1f%%)", pWild*100), WARNING_ORANGE); return 2;
+                    texteAffiche = String.format("WILD 🦁 (%.1f%%)", pWild*100); prediction = 2;
+                }
+            } else {
+                float proba1 = obtenirProbaModele(mod1, fichierImage);
+                float probaFinale = proba1;
+
+                if (avecFusion) {
+                    String mod2 = (String) comboModele2.getSelectedItem();
+                    float proba2 = obtenirProbaModele(mod2, fichierImage);
+                    probaFinale = (proba1 + proba2) / 2.0f;
+                    System.out.printf("🧠 FUSION DES CERVEAUX : %.2f%%\n", probaFinale * 100);
+                }
+
+                if (probaFinale >= 0.5f) {
+                    texteAffiche = String.format(avecFusion ? "CHAT 🐱 (Fusion: %.1f%%)" : "CHAT 🐱 (%.1f%%)", probaFinale * 100);
+                    prediction = 0;
+                } else {
+                    texteAffiche = String.format(avecFusion ? "CHIEN/WILD 🐶 (Fusion: %.1f%%)" : "CHIEN/WILD 🐶 (%.1f%%)", probaFinale * 100);
+                    prediction = 1; 
                 }
             }
 
-            float proba1 = obtenirProbaModele(mod1, fichierImage);
-            System.out.printf("Avis Modèle 1 : %.2f%%\n", proba1 * 100);
-            float probaFinale = proba1;
+            Color couleurResultat = ACCENT_BLUE; 
 
-            if (avecFusion) {
-                String mod2 = (String) comboModele2.getSelectedItem();
-                float proba2 = obtenirProbaModele(mod2, fichierImage);
-                System.out.printf("Avis Modèle 2 : %.2f%%\n", proba2 * 100);
-                
-                probaFinale = (proba1 + proba2) / 2.0f;
-                System.out.printf("🧠 FUSION DES CERVEAUX : %.2f%%\n", probaFinale * 100);
+            if (vraiLabel != -1) {
+                int vraiLabelAComparer = vraiLabel;
+                if (!isMulti && vraiLabel == 2) vraiLabelAComparer = 1; 
+
+                if (prediction == vraiLabelAComparer) {
+                    couleurResultat = SUCCESS_GREEN; 
+                } else {
+                    couleurResultat = ERROR_RED;     
+                }
             }
 
-            if (probaFinale >= 0.5f) {
-                majUIResultat(String.format(avecFusion ? "CHAT 🐱 (Fusion: %.1f%%)" : "CHAT 🐱 (%.1f%%)", probaFinale * 100), SUCCESS_GREEN);
-                return 0;
-            } else {
-                majUIResultat(String.format(avecFusion ? "CHIEN/WILD 🐶 (Fusion: %.1f%%)" : "CHIEN/WILD 🐶 (%.1f%%)", probaFinale * 100), WARNING_ORANGE);
-                return 1;
-            }
+            majUIResultat(texteAffiche, couleurResultat);
+            return prediction;
 
         } catch (Exception ex) {
             System.out.println("❌ Erreur : " + ex.getMessage());
-            majUIResultat("ERREUR D'ANALYSE", Color.RED);
+            majUIResultat("ERREUR D'ANALYSE", ERROR_RED);
             return -1;
         }
     }
@@ -428,9 +568,6 @@ public class MenuGraphique extends JFrame {
         });
     }
 
-    // =====================================================================
-    // L'USINE À DONNÉES (Gère tous les formats, y compris le TSL)
-    // =====================================================================
     private float obtenirProbaModele(String modeleStr, File imgFile) throws Exception {
         String fichierTxt = extraireNomFichier(modeleStr);
         if (!new File(fichierTxt).exists()) throw new Exception("Fichier manquant : " + fichierTxt);
@@ -449,7 +586,7 @@ public class MenuGraphique extends JFrame {
             for (int i = 0; i < taille; i++) if (resFFT[i].mod() > max) max = resFFT[i].mod();
             for (int i = 0; i < taille; i++) pixels[i] = (max > 0) ? (float)(resFFT[i].mod() / max) : 0;
         } 
-        else if (modeleStr.contains("TSL")) { // --- INTÉGRATION DE LA CONVERSION TSL ---
+        else if (modeleStr.contains("TSL")) { 
             BufferedImage bimg = ImageIO.read(imgFile);
             int w = bimg.getWidth(), h = bimg.getHeight();
             pixels = new float[w * h * 3];
@@ -485,7 +622,6 @@ public class MenuGraphique extends JFrame {
     }
 
     public static void main(String[] args) {
-        // LE SECRET POUR ÉCRASER LE THÈME WINDOWS (Méthode forte) :
         try { 
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName()); 
         } catch (Exception e) {}

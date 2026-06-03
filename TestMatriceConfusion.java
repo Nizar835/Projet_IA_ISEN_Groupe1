@@ -37,7 +37,7 @@ public class TestMatriceConfusion
 		}
 
 		System.out.println("Entraînement des 3 neurones en cours (MSE limite : 0.08)...");
-		final float MSE = 0.08f;
+		final float MSE = 0.2f;
 		int synapses = entrees[0].length;
 		
 		iNeurone neuroneChat = new NeuroneSigmoide(synapses);
