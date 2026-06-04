@@ -16,14 +16,12 @@ public class TestFFT
         
         Image.melange(imagesTrain);
         
-        // Listes sécurisées pour le multi-threading
         List<float[]> listeEntrees = Collections.synchronizedList(new ArrayList<>());
         List<Float> listeResultats = Collections.synchronizedList(new ArrayList<>());
         
         System.out.println("Extraction des caractéristiques FFT en parallèle (Exploitation de tous les cœurs du processeur)...");
         System.out.println("Veuillez patienter, calculs mathématiques lourds en cours...");
 
-        // Traitement parallèle : chaque cœur du processeur gère ses propres images
         imagesTrain.parallelStream().forEach(img -> {
             if (img.donnees() == null) return;
             
@@ -35,13 +33,11 @@ public class TestFFT
                 signal[i] = new ComplexeCartesien(img.donnees()[i] / 255.0, 0);
             }
             
-            // Calcul de la FFT
             Complexe[] resultatFFT = FFTCplx.appliqueSur(signal);
             
             float[] features = new float[taille];
             double maxMod = 0;
             
-            // Recherche du module maximum
             for (int i = 0; i < taille; i++) {
                 double currentMod = resultatFFT[i].mod();
                 if (currentMod > maxMod) {
@@ -49,12 +45,10 @@ public class TestFFT
                 }
             }
             
-            // Normalisation des features
             for (int i = 0; i < taille; i++) {
                 features[i] = (maxMod > 0) ? (float)(resultatFFT[i].mod() / maxMod) : 0;
             }
             
-            // Ajout sécurisé aux listes globales
             listeEntrees.add(features);
             listeResultats.add(labelPourNeurone);
         });
@@ -78,10 +72,8 @@ public class TestFFT
         System.out.println("Début de l'apprentissage sur les spectres fréquentiels...");
         neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
         
-        // --- AJOUT DE LA SAUVEGARDE ---
         neurone.sauvegarde("cerveau_fft.txt");
 
-        // --- PHASE DE TEST ---
         System.out.println("\n--- ÉVALUATION SUR LE JEU DE TEST (FFT) ---");
         List<Image> imagesTest = Image.chargeDataset("dataset_animaux/test/", true);
         

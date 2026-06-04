@@ -1,120 +1,99 @@
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Collections;
 
 public class TestRGB 
 {
-	public static void main(String[] args) 
-	{
-		System.out.println("=== EXTENSION NIVEAU 3 : APPRENTISSAGE EN COULEURS (RGB) ===");
-		
-		// --- 1. LECTURE ET LABELLISATION (TRAIN) ---
-		String dossierTrain = "dataset_animaux/train/";
-		List<String> cheminsFichiers = Image.listeFichiers(dossierTrain);
-		
-		if (cheminsFichiers == null || cheminsFichiers.isEmpty()) {
-			System.out.println("Erreur : Aucune image d'entraînement trouvée.");
-			return;
-		}
+    public static void main(String[] args) 
+    {
+        System.out.println("=== EXTENSION NIVEAU 3 : APPRENTISSAGE EN COULEURS (ESPACE RGB) ===");
+        
+        // --- 1. LECTURE DU DATASET EN MODE COULEURS ---
+        System.out.println("Lecture du dataset d'entraînement en mode RGB...");
+        // Le paramètre 'false' indique à la classe Image de ne PAS forcer le niveau de gris
+        // et d'extraire les 3 canaux de couleurs (Rouge, Vert, Bleu).
+        List<Image> imagesTrain = Image.chargeDataset("dataset_animaux/train/", false);
+        
+        if (imagesTrain == null || imagesTrain.isEmpty()) {
+            System.out.println("Erreur : Aucune image d'entraînement trouvée.");
+            return;
+        }
 
-		List<float[]> listeEntrees = new ArrayList<>();
-		List<Float> listeResultats = new ArrayList<>();
-		
-		System.out.println("Lecture et normalisation RGB de " + cheminsFichiers.size() + " images...");
+        System.out.println("Mélange aléatoire des données (Shuffle) pour éviter l'overfitting...");
+        Image.melange(imagesTrain);
 
-		for (String chemin : cheminsFichiers) 
-		{
-			int labelAttendu = chemin.contains("cat") ? 1 : 0;
-			
-			// false = mode RGB (Couleurs)
-			Image img = new Image(chemin, labelAttendu, false); 
-			
-			// BOUCLIER ANTI-CRASH : Sécurité pour le fichier corrompu
-			if (img.donnees() == null) {
-				System.out.println("⚠️ Image RGB ignorée car corrompue : " + chemin);
-				continue;
-			}
-			
-			// --- 2. NORMALISATION (Appel propre de la méthode) ---
-			float[] pixelsNormalises = img.donneesNormalisees();
-			listeEntrees.add(pixelsNormalises);
-			listeResultats.add((float) labelAttendu);
-		}
-		
-		// --- 3. MÉLANGE DES DONNÉES ---
-		System.out.println("Mélange aléatoire des données...");
-		List<Integer> indexList = new ArrayList<>();
-		for (int i = 0; i < listeEntrees.size(); i++) {
-			indexList.add(i);
-		}
-		Collections.shuffle(indexList);
-		
-		List<float[]> entreesMelangees = new ArrayList<>();
-		List<Float> resultatsMelanges = new ArrayList<>();
-		
-		for (int index : indexList) {
-			entreesMelangees.add(listeEntrees.get(index));
-			resultatsMelanges.add(listeResultats.get(index));
-		}
-		listeEntrees = entreesMelangees;
-		listeResultats = resultatsMelanges;
-		
-		// --- 4. ENTRAÎNEMENT ---
-		float[][] entreesArray = new float[listeEntrees.size()][];
-		for (int i = 0; i < listeEntrees.size(); i++) {
-			entreesArray[i] = listeEntrees.get(i);
-		}
-		
-		float[] resultatsArray = new float[listeResultats.size()];
-		for (int i = 0; i < listeResultats.size(); i++) {
-			resultatsArray[i] = listeResultats.get(i);
-		}
-		
-		int nbEntreesNeurone = entreesArray[0].length;
-		System.out.println("Le réseau aura " + nbEntreesNeurone + " synapses (3 par pixel).");
-		
-		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.08f; 
-		
-		System.out.println("Début de l'apprentissage (Attention, cela sera plus long en RGB)...");
-		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
-		
-		// --- 5. PHASE DE TEST DIRECTE ---
-		System.out.println("\n--- ÉVALUATION DU MODÈLE RGB SUR LE JEU DE TEST ---");
-		String dossierTest = "dataset_animaux/test/";
-		List<String> fichiersTest = Image.listeFichiers(dossierTest);
-		
-		int bonnesReponses = 0;
-		int totalTestSains = 0;
+        // --- 2. PRÉPARATION DES TENSEURS POUR LE NEURONE ---
+        List<float[]> listeEntrees = new ArrayList<>();
+        List<Float> listeResultats = new ArrayList<>();
 
-		for (String chemin : fichiersTest) 
-		{
-			int labelAttendu = chemin.contains("cat") ? 1 : 0;
-			
-			Image imgTest = new Image(chemin, labelAttendu, false);
-			
-			// Protection pendant la phase de test
-			if (imgTest.donnees() == null) {
-				continue;
-			}
-			
-			totalTestSains++;
-			
-			// --- NORMALISATION TEST (Appel propre de la méthode) ---
-			float[] pixelsNormalisesTest = imgTest.donneesNormalisees();
-			
-			neurone.metAJour(pixelsNormalisesTest);
-			int labelPredit = (neurone.sortie() > 0.5f) ? 1 : 0;
-			
-			if (labelPredit == labelAttendu) {
-				bonnesReponses++;
-			}
-		}
-		
-		if (totalTestSains > 0) {
-			float pourcentageReussite = ((float) bonnesReponses / totalTestSains) * 100;
-			System.out.printf(">>> Précision du modèle RGB : %.2f %% (%d/%d) <<<\n", 
-								pourcentageReussite, bonnesReponses, totalTestSains);
-		}
-	}
+        for (Image img : imagesTrain) 
+        {
+            if (img.donnees() == null) continue; // Bouclier anti-crash pour les images corrompues
+
+            // La cible : 1.0f pour les chats, 0.0f pour le reste (chiens et wilds)
+            float labelPourNeurone = (img.label() == 0) ? 1.0f : 0.0f;
+
+            listeEntrees.add(img.donneesNormalisees());
+            listeResultats.add(labelPourNeurone);
+        }
+
+        // Conversion des listes dynamiques en tableaux primitifs (requis par le Neurone)
+        float[][] entreesArray = new float[listeEntrees.size()][];
+        for (int i = 0; i < listeEntrees.size(); i++) {
+            entreesArray[i] = listeEntrees.get(i);
+        }
+        
+        float[] resultatsArray = new float[listeResultats.size()];
+        for (int i = 0; i < listeResultats.size(); i++) {
+            resultatsArray[i] = listeResultats.get(i);
+        }
+        
+        // --- 3. ENTRAÎNEMENT DU RÉSEAU DE NEURONES ---
+        int nbEntreesNeurone = entreesArray[0].length;
+        System.out.println("Le réseau aura " + nbEntreesNeurone + " synapses (3 par pixel : R, G, B).");
+        
+        iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
+        final float MSElimite = 0.08f; 
+        
+        System.out.println("Début de l'apprentissage (Attention, calculs lourds dus à la taille des matrices 3D)...");
+        neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
+        System.out.println(">>> Apprentissage RGB terminé avec succès ! <<<");
+
+
+        neurone.sauvegarde("cerveau_rgb.txt");
+        System.out.println("Cerveau sauvegardé sous le nom 'cerveau_rgb.txt'.");
+
+        // --- 4. ÉVALUATION GLOBALE SUR LE JEU DE TEST ---
+        System.out.println("\n--- ÉVALUATION DU MODÈLE RGB SUR LE JEU DE TEST ---");
+        // On charge les images de test également en mode RGB (false)
+        List<Image> imagesTest = Image.chargeDataset("dataset_animaux/test/", false); 
+        
+        if (imagesTest != null && !imagesTest.isEmpty()) {
+            int bonnesReponses = 0;
+            int totalTest = 0;
+
+            for (Image imgTest : imagesTest) 
+            {
+                if (imgTest.donnees() == null) continue;
+
+                // On soumet les pixels de test (normalisés) au réseau
+                neurone.metAJour(imgTest.donneesNormalisees());
+                float proba = neurone.sortie();
+
+                // On compare la prédiction avec la vraie nature de l'image
+                float vraiLabel = (imgTest.label() == 0) ? 1.0f : 0.0f;
+                float reponseArrondie = (proba >= 0.5f) ? 1.0f : 0.0f;
+
+                if (reponseArrondie == vraiLabel) {
+                    bonnesReponses++;
+                }
+                totalTest++;
+            }
+            
+            if (totalTest > 0) {
+                float pourcentageReussite = ((float) bonnesReponses / totalTest) * 100.0f;
+                System.out.printf(">>> Précision du modèle RGB : %.2f %% (%d/%d) <<<\n", 
+                                  pourcentageReussite, bonnesReponses, totalTest);
+            }
+        }
+    }
 }

@@ -5,6 +5,7 @@ import java.util.List;
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
 import java.awt.Color;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class TestTSL 
 {
@@ -25,55 +26,57 @@ public class TestTSL
         System.out.println("Mélange des fichiers...");
         Collections.shuffle(fichiersTrain);
         
-        List<float[]> listeEntrees = new ArrayList<>();
-        List<Float> listeResultats = new ArrayList<>();
+        // Listes synchronisées pour le multi-threading
+        List<float[]> listeEntrees = Collections.synchronizedList(new ArrayList<>());
+        List<Float> listeResultats = Collections.synchronizedList(new ArrayList<>());
+        AtomicInteger compteur = new AtomicInteger(0);
         
-        System.out.println("Conversion matricielle des images en espace TSL...");
+        System.out.println("Conversion matricielle des images en espace TSL (Mode Multi-Cœurs activé)...");
+        System.out.println("Veuillez patienter...");
 
-        int index = 0;
-        for (String chemin : fichiersTrain) 
-        {
+        // BOUCLE PARALLÈLE : Charge et convertit les images beaucoup plus vite
+        fichiersTrain.parallelStream().forEach(chemin -> {
             try {
                 BufferedImage bimg = ImageIO.read(new File(chemin));
-                if (bimg == null) continue;
-
-                int largeur = bimg.getWidth();
-                int hauteur = bimg.getHeight();
-                
-                float[] pixelsTSL = new float[largeur * hauteur * 3];
-                int pos = 0;
-                
-                for (int y = 0; y < hauteur; y++) {
-                    for (int x = 0; x < largeur; x++) {
-                        int rgb = bimg.getRGB(x, y);
-                        Color couleur = new Color(rgb, true);
-                        
-                        float[] tsl = new float[3];
-                        Color.RGBtoHSB(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), tsl);
-                        
-                        pixelsTSL[pos] = tsl[0];
-                        pixelsTSL[pos+1] = tsl[1];
-                        pixelsTSL[pos+2] = tsl[2];
-                        pos += 3;
+                if (bimg != null) {
+                    int largeur = bimg.getWidth();
+                    int hauteur = bimg.getHeight();
+                    
+                    float[] pixelsTSL = new float[largeur * hauteur * 3];
+                    int pos = 0;
+                    
+                    for (int y = 0; y < hauteur; y++) {
+                        for (int x = 0; x < largeur; x++) {
+                            int rgb = bimg.getRGB(x, y);
+                            Color couleur = new Color(rgb, true);
+                            
+                            float[] tsl = new float[3];
+                            Color.RGBtoHSB(couleur.getRed(), couleur.getGreen(), couleur.getBlue(), tsl);
+                            
+                            pixelsTSL[pos] = tsl[0];
+                            pixelsTSL[pos+1] = tsl[1];
+                            pixelsTSL[pos+2] = tsl[2];
+                            pos += 3;
+                        }
+                    }
+                    
+                    float labelPourNeurone = chemin.contains("cat") ? 1.0f : 0.0f;
+                    listeEntrees.add(pixelsTSL);
+                    listeResultats.add(labelPourNeurone);
+                    
+                    int progression = compteur.incrementAndGet();
+                    if (progression % 5000 == 0) {
+                        System.out.println(progression + " images converties...");
                     }
                 }
-                
-                float labelPourNeurone = chemin.contains("cat") ? 1.0f : 0.0f;
-                listeEntrees.add(pixelsTSL);
-                listeResultats.add(labelPourNeurone);
-                
-                index++;
-                if (index % 5000 == 0) {
-                    System.out.println(index + " images converties...");
-                }
-                
             } catch (Exception e) {
                 // Ignore les images corrompues
             }
-        }
+        });
         
         System.out.println("Toutes les images sont converties ! Taille du dataset : " + listeEntrees.size());
 
+        // Transfert vers des tableaux classiques pour le neurone
         float[][] entreesArray = new float[listeEntrees.size()][];
         for (int i = 0; i < listeEntrees.size(); i++) entreesArray[i] = listeEntrees.get(i);
         
@@ -82,17 +85,20 @@ public class TestTSL
         
         int nbEntreesNeurone = entreesArray[0].length;
         iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-        final float MSElimite = 0.08f; 
         
-        System.out.println("Début de l'apprentissage (Attention, c'est très lourd : il y a 3 canaux de couleur !)...");
+        // CORRECTION CRITIQUE : Limite relevée à 0.12f pour éviter la boucle infinie !
+        final float MSElimite = 0.12f; 
+        
+        System.out.println("Début de l'apprentissage (MSE Limite fixée à " + MSElimite + ")...");
         neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
         System.out.println(">>> Apprentissage TSL terminé avec succès ! <<<");
 
+        // --- LA SAUVEGARDE VA ENFIN S'EXÉCUTER ---
         neurone.sauvegarde("cerveau_tsl.txt");
         System.out.println("Cerveau sauvegardé sous le nom 'cerveau_tsl.txt'.");
 
         // ==========================================================
-        // --- 2. NOUVELLE PHASE : ÉVALUATION SUR LE JEU DE TEST  ---
+        // --- 2. PHASE D'ÉVALUATION SUR LE JEU DE TEST           ---
         // ==========================================================
         System.out.println("\n--- ÉVALUATION DU MODÈLE TSL SUR LE JEU DE TEST ---");
         String dossierTest = "dataset_animaux/test/";
@@ -117,7 +123,6 @@ public class TestTSL
                 float[] pixelsTSL = new float[largeur * hauteur * 3];
                 int pos = 0;
                 
-                // On reconvertit l'image de test en TSL pour le neurone
                 for (int y = 0; y < hauteur; y++) {
                     for (int x = 0; x < largeur; x++) {
                         int rgb = bimgTest.getRGB(x, y);
@@ -133,7 +138,6 @@ public class TestTSL
                 
                 int labelAttendu = cheminTest.contains("cat") ? 1 : 0;
                 
-                // Prédiction
                 neurone.metAJour(pixelsTSL);
                 int labelPredit = (neurone.sortie() >= 0.5f) ? 1 : 0;
                 
@@ -142,9 +146,7 @@ public class TestTSL
                 }
                 totalTest++;
                 
-            } catch (Exception e) {
-                // Ignore les images corrompues
-            }
+            } catch (Exception e) {}
         }
         
         if (totalTest > 0) {

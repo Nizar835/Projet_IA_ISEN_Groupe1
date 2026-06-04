@@ -1,97 +1,124 @@
 import java.util.List;
-import java.util.ArrayList;
+import java.io.File;
 
 public class TestMatriceConfusion 
 {
 	public static void main(String[] args) 
 	{
-		System.out.println("=== EXTENSION BONUS : GÉNÉRATION DE LA MATRICE DE CONFUSION ===");
+		System.out.println("=== ÉVALUATION SCIENTIFIQUE : MATRICES DE CONFUSION ===");
+		System.out.println("Chargement des cerveaux depuis le disque dur...");
 		
-		// 1. CHARGEMENT ET ENTRAÎNEMENT RAPIDE
-		List<Image> imagesTrain = Image.chargeDataset("dataset_animaux/train/", true);
-		if (imagesTrain == null || imagesTrain.isEmpty()) return;
-		Image.melange(imagesTrain);
+		int synapses = 10000; 
+		try {
+		    List<Image> sample = Image.chargeDataset("dataset_animaux/test/", true);
+		    if (sample != null && !sample.isEmpty()) {
+		        synapses = sample.get(0).donnees().length;
+		    }
+		} catch (Exception e) {}
 
-		List<float[]> listeEntrees = new ArrayList<>();
-		List<Integer> listeLabels = new ArrayList<>();
-		for (Image img : imagesTrain) {
-			if (img.donnees() != null) {
-				listeEntrees.add(img.donneesNormalisees());
-				listeLabels.add(img.label());
-			}
+		// --- 1. CHARGEMENT DU MODÈLE BINAIRE ---
+		iNeurone neuroneBinaire = new NeuroneSigmoide(synapses);
+		if (new File("cerveau_binaire.txt").exists()) {
+			neuroneBinaire.chargement("cerveau_binaire.txt");
+		} else {
+			System.out.println("Attention : cerveau_binaire.txt introuvable.");
 		}
 
-		float[][] entrees = new float[listeEntrees.size()][];
-		for (int i = 0; i < listeEntrees.size(); i++) entrees[i] = listeEntrees.get(i);
-		
-		int nbImages = entrees.length;
-		float[] consignesChat = new float[nbImages];
-		float[] consignesChien = new float[nbImages];
-		float[] consignesWild = new float[nbImages];
-
-		for (int i = 0; i < nbImages; i++) {
-			int lbl = listeLabels.get(i);
-			consignesChat[i]  = (lbl == 0) ? 1.0f : 0.0f;
-			consignesChien[i] = (lbl == 1) ? 1.0f : 0.0f;
-			consignesWild[i]  = (lbl == 2) ? 1.0f : 0.0f;
-		}
-
-		System.out.println("Entraînement des 3 neurones en cours (MSE limite : 0.08)...");
-		final float MSE = 0.2f;
-		int synapses = entrees[0].length;
-		
+		// --- 2. CHARGEMENT DES MODÈLES MULTI-CLASSES ---
 		iNeurone neuroneChat = new NeuroneSigmoide(synapses);
-		neuroneChat.apprentissage(entrees, consignesChat, MSE);
-		
 		iNeurone neuroneChien = new NeuroneSigmoide(synapses);
-		neuroneChien.apprentissage(entrees, consignesChien, MSE);
-		
 		iNeurone neuroneWild = new NeuroneSigmoide(synapses);
-		neuroneWild.apprentissage(entrees, consignesWild, MSE);
+		
+		if (new File("cerveau_chat.txt").exists()) {
+			neuroneChat.chargement("cerveau_chat.txt");
+			neuroneChien.chargement("cerveau_chien.txt");
+			neuroneWild.chargement("cerveau_wild.txt");
+		}
 
-		// 2. CRÉATION DE LA MATRICE DE CONFUSION
-		System.out.println("\nCalcul de la matrice sur le jeu de test...");
+		System.out.println("\nCalcul des matrices sur le jeu de test...");
 		List<Image> imagesTest = Image.chargeDataset("dataset_animaux/test/", true);
 		
-		// Tableau 3x3 : Ligne = Vraie catégorie, Colonne = Prédiction de l'IA
-		int[][] matrice = new int[3][3];
+		if (imagesTest == null || imagesTest.isEmpty()) {
+		    System.out.println("Erreur : Aucun dataset de test trouvé.");
+		    return;
+		}
+
+		// Initialisation des tableaux
+		int[][] matriceBinaire = new int[2][2]; // 0=Chat, 1=Non-Chat
+		int[][] matriceMulti = new int[3][3];   // 0=Chat, 1=Chien, 2=Wild
 
 		for (Image imgTest : imagesTest) {
 			if (imgTest.donnees() == null) continue;
 			
 			float[] pixels = imgTest.donneesNormalisees();
-			int vraiLabel = imgTest.label(); // 0=Chat, 1=Chien, 2=Wild
+			int vraiLabelBrut = imgTest.label(); 
 			
+			// ==========================================
+			// ÉVALUATION DU MODÈLE BINAIRE (BASE)
+			// ==========================================
+			neuroneBinaire.metAJour(pixels);
+			float probaBinaire = neuroneBinaire.sortie();
+			
+			int vraiLabelBin = (vraiLabelBrut == 0) ? 0 : 1; 
+			int predLabelBin = (probaBinaire >= 0.5f) ? 0 : 1;
+			matriceBinaire[vraiLabelBin][predLabelBin]++;
+
+			// ==========================================
+			// ÉVALUATION DU MODÈLE MULTI-CLASSES
+			// ==========================================
 			neuroneChat.metAJour(pixels);
 			neuroneChien.metAJour(pixels);
 			neuroneWild.metAJour(pixels);
 			
 			float maxProba = neuroneChat.sortie();
-			int labelPredit = 0;
+			int predLabelMulti = 0;
 			
 			if (neuroneChien.sortie() > maxProba) {
 				maxProba = neuroneChien.sortie();
-				labelPredit = 1;
+				predLabelMulti = 1;
 			}
 			if (neuroneWild.sortie() > maxProba) {
-				labelPredit = 2;
+				predLabelMulti = 2;
 			}
 			
-			// On incrémente la case correspondante dans la matrice
-			if (vraiLabel >= 0 && vraiLabel <= 2) {
-				matrice[vraiLabel][labelPredit]++;
+			if (vraiLabelBrut >= 0 && vraiLabelBrut <= 2) {
+				matriceMulti[vraiLabelBrut][predLabelMulti]++;
 			}
 		}
 
-		// 3. AFFICHAGE DE LA MATRICE (Formatage pour le terminal)
-		System.out.println("\n================ MATRICE DE CONFUSION ================");
+		// --- CALCUL DES POURCENTAGES ---
+		int totalBinaire = matriceBinaire[0][0] + matriceBinaire[0][1] + matriceBinaire[1][0] + matriceBinaire[1][1];
+		float precisionBinaire = ((float)(matriceBinaire[0][0] + matriceBinaire[1][1]) / totalBinaire) * 100.0f;
+
+		int totalMulti = 0;
+		int bonnesMulti = 0;
+		for (int i = 0; i < 3; i++) {
+			for (int j = 0; j < 3; j++) {
+				totalMulti += matriceMulti[i][j];
+				if (i == j) bonnesMulti += matriceMulti[i][j]; // La diagonale
+			}
+		}
+		float precisionMulti = ((float)bonnesMulti / totalMulti) * 100.0f;
+
+		// --- AFFICHAGE MATRICE BINAIRE ---
+		System.out.println("\n================ 1. MATRICE DE CONFUSION (MODÈLE DE BASE) ================");
+		System.out.println("                 | PRÉDIT CHAT (0) | PRÉDIT NON-CHAT (1) |");
+		System.out.println("-----------------|-----------------|---------------------|");
+		System.out.printf(" VRAI CHAT (0)   | %15d | %19d | <-- Faux Négatifs (Chats ratés)\n", matriceBinaire[0][0], matriceBinaire[0][1]);
+		System.out.printf(" VRAI NON-CHAT(1)| %15d | %19d | \n", matriceBinaire[1][0], matriceBinaire[1][1]);
+		System.out.println("                   ^ Faux Positifs (Pris pour des chats)");
+		System.out.println("--------------------------------------------------------------------------");
+		System.out.printf(">>> PRÉCISION GLOBALE BINAIRE : %.2f %% <<<\n", precisionBinaire);
+
+		// --- AFFICHAGE MATRICE MULTI-CLASSES ---
+		System.out.println("\n================ 2. MATRICE DE CONFUSION (MULTI-CLASSES) =================");
 		System.out.println("                 | PRÉDIT CHAT | PRÉDIT CHIEN| PRÉDIT WILD |");
 		System.out.println("-----------------|-------------|-------------|-------------|");
-		System.out.printf(" VRAI CHAT (0)   | %11d | %11d | %11d |\n", matrice[0][0], matrice[0][1], matrice[0][2]);
-		System.out.printf(" VRAI CHIEN(1)   | %11d | %11d | %11d |\n", matrice[1][0], matrice[1][1], matrice[1][2]);
-		System.out.printf(" VRAI WILD (2)   | %11d | %11d | %11d |\n", matrice[2][0], matrice[2][1], matrice[2][2]);
-		System.out.println("======================================================");
-		System.out.println("Lecture : La diagonale représente les bonnes réponses.");
-		System.out.println("Les autres cases montrent quelles espèces l'IA confond.");
+		System.out.printf(" VRAI CHAT (0)   | %11d | %11d | %11d |\n", matriceMulti[0][0], matriceMulti[0][1], matriceMulti[0][2]);
+		System.out.printf(" VRAI CHIEN(1)   | %11d | %11d | %11d |\n", matriceMulti[1][0], matriceMulti[1][1], matriceMulti[1][2]);
+		System.out.printf(" VRAI WILD (2)   | %11d | %11d | %11d |\n", matriceMulti[2][0], matriceMulti[2][1], matriceMulti[2][2]);
+		System.out.println("==========================================================================");
+		System.out.printf(">>> PRÉCISION GLOBALE MULTI-CLASSES : %.2f %% <<<\n", precisionMulti);
+		System.out.println("==========================================================================");
 	}
 }

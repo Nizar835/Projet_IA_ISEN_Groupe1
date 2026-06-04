@@ -18,15 +18,20 @@ public class MenuGraphique extends JFrame {
     private JLabel resultLabel;
     private JButton[] actionButtons; 
     
-    // Nouveaux boutons extraits pour pouvoir les désactiver
     private JButton btnTesterImage;
     private JButton btnTesterAleatoire;
-    private JButton btnUsine;
+    private JButton btnEntrainementSequentiel;
+    private JButton btnStop; // LE KILL SWITCH ULTIME
 
     private JTextField etaField;
     private JComboBox<String> comboModele1; 
     private JComboBox<String> comboModele2;
     private JCheckBox cbFusion;
+
+    // --- SÉCURITÉ DE HAUT NIVEAU (POISON PILL) ---
+    private volatile boolean stopDemande = false;
+    private volatile boolean poisonPillActive = false;
+    private volatile Thread threadEnCours = null;
 
     // --- PALETTE DE COULEURS ---
     private final Color BG_COLOR = new Color(30, 30, 30);
@@ -37,7 +42,7 @@ public class MenuGraphique extends JFrame {
     private final Color SUCCESS_GREEN = new Color(46, 204, 113); 
     private final Color ERROR_RED = new Color(231, 76, 60);     
     private final Color WARNING_ORANGE = new Color(255, 152, 0);
-    private final Color FACTORY_PURPLE = new Color(142, 68, 173); // Couleur pour l'Usine
+    private final Color BATCH_PURPLE = new Color(142, 68, 173); 
 
     public MenuGraphique() {
         setTitle("🧠 Dashboard IA Pro - L'Intégrale (Groupe 1)");
@@ -84,10 +89,10 @@ public class MenuGraphique extends JFrame {
         add(panelConfig, BorderLayout.NORTH);
 
         // =========================================================
-        // GAUCHE : LANCEURS D'ENTRAÎNEMENT (Maintenant 10 boutons)
+        // GAUCHE : LANCEURS D'ENTRAÎNEMENT
         // =========================================================
         JPanel panelMenu = creerPanneauStyle("1. Entraînements (Création des cerveaux)");
-        panelMenu.setLayout(new GridLayout(10, 1, 10, 8)); // 10 emplacements !
+        panelMenu.setLayout(new GridLayout(11, 1, 10, 8)); 
         panelMenu.setPreferredSize(new Dimension(320, 0));
 
         actionButtons = new JButton[]{
@@ -101,13 +106,25 @@ public class MenuGraphique extends JFrame {
             creerBoutonStyle("8. Crash-Test : Sans Normalisation", BUTTON_BG),
             creerBoutonStyle("9. Évaluation : Matrice de Confusion", BUTTON_BG)
         };
-
         for (JButton btn : actionButtons) panelMenu.add(btn);
 
-        // --- NOUVEAUTÉ : LE BOUTON USINE ---
-        btnUsine = creerBoutonStyle("🚀 TOUT ENTRAÎNER (L'Usine)", FACTORY_PURPLE);
-        btnUsine.addActionListener(e -> lancerUsineSequentielle());
-        panelMenu.add(btnUsine);
+        btnEntrainementSequentiel = creerBoutonStyle("🚀 ENTRAÎNEMENT SÉQUENTIEL COMPLET", BATCH_PURPLE);
+        btnEntrainementSequentiel.addActionListener(e -> lancerEntrainementSequentiel());
+        panelMenu.add(btnEntrainementSequentiel);
+
+        // --- LE BOUTON STOP (KILL SWITCH INFAILLIBLE) ---
+        btnStop = creerBoutonStyle("🛑 STOP (ARRÊT IMMÉDIAT)", ERROR_RED);
+        btnStop.setEnabled(false); 
+        btnStop.addActionListener(e -> {
+            if (threadEnCours != null && !stopDemande) {
+                stopDemande = true;
+                poisonPillActive = true; // Armement du piège dans la console
+                threadEnCours.interrupt(); // Coupe les pauses (Sleep) instantanément
+                resultLabel.setText("ARRÊT BRUTAL...");
+                resultLabel.setForeground(ERROR_RED);
+            }
+        });
+        panelMenu.add(btnStop);
 
         add(panelMenu, BorderLayout.WEST);
 
@@ -218,7 +235,6 @@ public class MenuGraphique extends JFrame {
 
         redirigerConsole();
 
-        // Assignation multi-thread individuelle
         actionButtons[0].addActionListener(e -> lancerTacheSecurisee(() -> MainProjet.main(new String[]{})));
         actionButtons[1].addActionListener(e -> lancerTacheSecurisee(() -> TestMultiClasses.main(new String[]{})));
         actionButtons[2].addActionListener(e -> lancerTacheSecurisee(() -> TestMiroir.main(new String[]{})));
@@ -231,163 +247,148 @@ public class MenuGraphique extends JFrame {
     }
 
     // =====================================================================
-    // SYSTÈME DE VERROUILLAGE ANTI-SUPERPOSITION (NOUVEAUTÉ)
+    // NOYAU DU KILL SWITCH (L'INJECTION D'ERREUR DANS LE SYSTEM.OUT)
     // =====================================================================
-    private void setBoutonsActifs(boolean actif) {
-        for (JButton btn : actionButtons) btn.setEnabled(actif);
-        btnUsine.setEnabled(actif);
-        btnTesterImage.setEnabled(actif);
-        btnTesterAleatoire.setEnabled(actif);
-    }
-
-    // =====================================================================
-    // L'USINE (BATCH TRAINING SÉQUENTIEL POUR SAUVER LA RAM)
-    // =====================================================================
-    private void lancerUsineSequentielle() {
-        setBoutonsActifs(false);
-        resultLabel.setText("USINE EN COURS...");
-        resultLabel.setForeground(FACTORY_PURPLE);
-        
-        new Thread(() -> {
-            try {
-                System.out.println("\n=======================================================");
-                System.out.println("🚀 DÉMARRAGE DE L'USINE (Génération de tous les cerveaux)");
-                System.out.println("=======================================================\n");
-
-                MainProjet.main(new String[]{});
-                System.gc(); // Forcer le nettoyage de la RAM
-                Thread.sleep(1000);
-
-                TestMultiClasses.main(new String[]{});
-                System.gc();
-                Thread.sleep(1000);
-
-                TestMiroir.main(new String[]{});
-                System.gc();
-                Thread.sleep(1000);
-
-                TestRGB.main(new String[]{});
-                System.gc();
-                Thread.sleep(1000);
-
-                TestTSL.main(new String[]{});
-                System.gc();
-                Thread.sleep(1000);
-
-                TestFFT.main(new String[]{});
-                System.gc();
-                Thread.sleep(1000);
-                
-                TestSansMelange.main(new String[]{});
-                System.gc();
-                Thread.sleep(1000);
-                
-                TestSansNormalisation.main(new String[]{});
-
-                System.out.println("\n=======================================================");
-                System.out.println("✅ USINE TERMINÉE : TOUS LES CERVEAUX SONT PRÊTS !");
-                System.out.println("=======================================================\n");
-
-            } catch (Exception ex) {
-                System.out.println("❌ Erreur critique dans l'usine : " + ex.getMessage());
-            } finally {
-                SwingUtilities.invokeLater(() -> {
-                    setBoutonsActifs(true);
-                    resultLabel.setText("USINE TERMINÉE");
-                    resultLabel.setForeground(SUCCESS_GREEN);
-                    JOptionPane.showMessageDialog(this, "La production est terminée.\nTous les fichiers .txt sont à jour !", "Usine IA", JOptionPane.INFORMATION_MESSAGE);
-                });
-            }
-        }).start();
-    }
-
-    // =====================================================================
-    // UTILITAIRES DE DESIGN ET REDIRECTION
-    // =====================================================================
-    private JPanel creerPanneauStyle(String titre) {
-        JPanel p = new JPanel();
-        p.setBackground(PANEL_BG);
-        TitledBorder border = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)), titre);
-        border.setTitleColor(TEXT_COLOR);
-        border.setTitleFont(new Font("Segoe UI", Font.BOLD, 14));
-        p.setBorder(BorderFactory.createCompoundBorder(border, new EmptyBorder(10, 10, 10, 10)));
-        return p;
-    }
-
-    private JButton creerBoutonStyle(String texte, Color bgColor) {
-        JButton btn = new JButton(texte);
-        btn.setBackground(bgColor);
-        btn.setForeground(Color.WHITE);
-        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
-        btn.setContentAreaFilled(false);
-        btn.setOpaque(true);
-        btn.setFocusPainted(false);
-        btn.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
-        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
-
-        btn.addMouseListener(new MouseAdapter() {
-            public void mouseEntered(MouseEvent evt) {
-                if (btn.isEnabled()) btn.setBackground(bgColor.brighter());
-            }
-            public void mouseExited(MouseEvent evt) {
-                btn.setBackground(bgColor);
-            }
-        });
-        return btn;
-    }
-
     private void redirigerConsole() {
         OutputStream out = new OutputStream() {
             @Override
-            public void write(int b) { } 
+            public void write(int b) { verifierPoisonPill(); } 
+            
             @Override
             public void write(byte[] b, int off, int len) {
+                verifierPoisonPill();
                 String texte = new String(b, off, len, StandardCharsets.UTF_8);
                 SwingUtilities.invokeLater(() -> {
                     consoleArea.append(texte);
                     consoleArea.setCaretPosition(consoleArea.getDocument().getLength());
                 });
             }
+            
+            private void verifierPoisonPill() {
+                if (poisonPillActive && Thread.currentThread() == threadEnCours) {
+                    throw new RuntimeException("POISON_PILL");
+                }
+            }
         };
         PrintStream ps = new PrintStream(out, true, StandardCharsets.UTF_8);
         System.setOut(ps); System.setErr(ps);
     }
 
-    private void lancerTacheSecurisee(Runnable tâche) {
-        setBoutonsActifs(false); // VERROUILLAGE GLOBAL
+    // =====================================================================
+    // MÉTHODES DE GESTION DU CYCLE DE VIE DES PROCESSUS
+    // =====================================================================
+    private void setBoutonsActifs(boolean actif) {
+        for (JButton btn : actionButtons) btn.setEnabled(actif);
+        btnEntrainementSequentiel.setEnabled(actif);
+        btnTesterImage.setEnabled(actif);
+        btnTesterAleatoire.setEnabled(actif);
+        btnStop.setEnabled(!actif); // STOP n'est cliquable QUE quand ça calcule
+    }
+
+    private void preparerAvantTache() {
+        setBoutonsActifs(false); 
+        stopDemande = false; 
+        poisonPillActive = false;
         resultLabel.setText("CALCULS EN COURS...");
         resultLabel.setForeground(WARNING_ORANGE);
-        new Thread(() -> {
-            try { tâche.run(); } catch (Exception ex) { System.out.println("Erreur : " + ex.getMessage()); } 
-            finally {
-                SwingUtilities.invokeLater(() -> {
-                    setBoutonsActifs(true); // DÉVERROUILLAGE GLOBAL
-                    resultLabel.setText("PRÊT");
-                    resultLabel.setForeground(SUCCESS_GREEN);
-                });
+    }
+    
+    private void gererArretBrutal() {
+        poisonPillActive = false; // On désarme le piège pour pouvoir afficher le texte rouge
+        System.out.println("\n=======================================================");
+        System.out.println("🛑 PROCESSUS FOUDROYÉ SUR COMMANDE !");
+        System.out.println("=======================================================\n");
+    }
+
+    private void nettoyerApresTache() {
+        SwingUtilities.invokeLater(() -> {
+            setBoutonsActifs(true);
+            if (stopDemande) {
+                resultLabel.setText("STOPPÉ");
+                resultLabel.setForeground(ERROR_RED);
+            } else {
+                resultLabel.setText("PRÊT");
+                resultLabel.setForeground(SUCCESS_GREEN);
             }
-        }).start();
+            stopDemande = false;
+            threadEnCours = null;
+        });
     }
 
     // =====================================================================
-    // ANIMATION : SECURISÉE CONTRE LES MULTIPLES CLICS
+    // LANCEURS GLOBAUX SÉCURISÉS
     // =====================================================================
+    private void lancerTacheSecurisee(Runnable tâche) {
+        preparerAvantTache();
+        threadEnCours = new Thread(() -> {
+            try { 
+                tâche.run(); 
+            } catch (RuntimeException re) {
+                if ("POISON_PILL".equals(re.getMessage())) gererArretBrutal();
+                else System.out.println("Erreur : " + re.getMessage());
+            } catch (Exception ex) { 
+                System.out.println("Erreur : " + ex.getMessage()); 
+            } finally {
+                nettoyerApresTache();
+            }
+        });
+        threadEnCours.start();
+    }
+
+    private void lancerEntrainementSequentiel() {
+        preparerAvantTache();
+        resultLabel.setText("BATCH EN COURS...");
+        resultLabel.setForeground(BATCH_PURPLE);
+        
+        threadEnCours = new Thread(() -> {
+            try {
+                System.out.println("\n=======================================================");
+                System.out.println("🚀 DÉMARRAGE DE L'ENTRAÎNEMENT SÉQUENTIEL (Batch Mode)");
+                System.out.println("=======================================================\n");
+
+                MainProjet.main(new String[]{}); System.gc(); Thread.sleep(1000);
+                TestMultiClasses.main(new String[]{}); System.gc(); Thread.sleep(1000);
+                TestMiroir.main(new String[]{}); System.gc(); Thread.sleep(1000);
+                TestRGB.main(new String[]{}); System.gc(); Thread.sleep(1000);
+                TestTSL.main(new String[]{}); System.gc(); Thread.sleep(1000);
+                TestFFT.main(new String[]{}); System.gc(); Thread.sleep(1000);
+                TestSansMelange.main(new String[]{}); System.gc(); Thread.sleep(1000);
+                TestSansNormalisation.main(new String[]{});
+
+                System.out.println("\n=======================================================");
+                System.out.println("✅ ENTRAÎNEMENT COMPLET TERMINÉ !");
+                System.out.println("=======================================================\n");
+
+            } catch (RuntimeException re) {
+                if ("POISON_PILL".equals(re.getMessage())) gererArretBrutal();
+                else System.out.println("Erreur : " + re.getMessage());
+            } catch (InterruptedException ie) {
+                gererArretBrutal();
+            } catch (Exception ex) {
+                System.out.println("❌ Erreur : " + ex.getMessage());
+            } finally {
+                nettoyerApresTache();
+            }
+        });
+        threadEnCours.start();
+    }
+
     private void lancerTestAleatoireAnime() {
         List<String> fichiersTest = Image.listeFichiers("dataset_animaux/test/");
         if (fichiersTest == null || fichiersTest.isEmpty()) {
             System.out.println("❌ Erreur : Dossier de test introuvable.");
             return;
         }
-
         Collections.shuffle(fichiersTest);
         int nbImages = Math.min(10, fichiersTest.size());
 
-        setBoutonsActifs(false); // VERROUILLAGE GLOBAL !
+        preparerAvantTache();
 
-        new Thread(() -> {
+        threadEnCours = new Thread(() -> {
+            int scoreTotal = 0;
+            int imagesTestees = 0;
             try {
                 System.out.println("\n🚀 DÉMARRAGE DU TEST EN RAFALE (10 IMAGES) ...");
-                int scoreTotal = 0;
 
                 for (int i = 0; i < nbImages; i++) {
                     String cheminAbsolu = fichiersTest.get(i).toLowerCase();
@@ -404,51 +405,48 @@ public class MenuGraphique extends JFrame {
                         });
 
                         int prediction = executerInference(f, cbFusion.isSelected());
-                        
                         boolean isMulti = comboModele1.getSelectedItem().toString().contains("Multi-Classes");
-                        int vraiLabel;
-                        if (isMulti) {
-                            vraiLabel = cheminAbsolu.contains("cat") ? 0 : (cheminAbsolu.contains("dog") ? 1 : 2);
-                        } else {
-                            vraiLabel = cheminAbsolu.contains("cat") ? 0 : 1;
-                        }
+                        int vraiLabel = isMulti ? 
+                            (cheminAbsolu.contains("cat") ? 0 : (cheminAbsolu.contains("dog") ? 1 : 2)) : 
+                            (cheminAbsolu.contains("cat") ? 0 : 1);
 
-                        if (prediction == vraiLabel) {
-                            scoreTotal++;
-                        }
-                    } catch (Exception errImage) {
-                        System.out.println("Image ignorée car corrompue : " + f.getName());
-                    }
+                        if (prediction == vraiLabel) scoreTotal++;
+                        imagesTestees++;
+
+                    } catch (Exception errImage) {}
 
                     Thread.sleep(1200); 
                 }
-
                 System.out.println("\n🏆 FIN DU TEST ALÉATOIRE ! Score : " + scoreTotal + " / " + nbImages);
                 
-                final int finalScore = scoreTotal;
-                SwingUtilities.invokeLater(() -> {
-                    imageLabel.setIcon(null); 
-                    
-                    String couleurScore = (finalScore >= 6) ? "#4CAF50" : "#FF9800";
-                    if(finalScore < 5) couleurScore = "#E74C3C"; 
-                    
-                    String htmlTrophy = "<html><div style='text-align: center; font-family: Segoe UI;'>"
-                            + "<h1 style='color: white; font-size: 36px; margin-bottom: 5px;'>🏆 TEST TERMINÉ</h1>"
-                            + "<h2 style='color: " + couleurScore + "; font-size: 50px; margin-top: 0px;'>" + (finalScore * 10) + " %</h2>"
-                            + "<p style='color: gray; font-size: 16px;'>" + finalScore + " bonnes réponses sur " + nbImages + " images</p>"
-                            + "</div></html>";
-                    
-                    imageLabel.setText(htmlTrophy);
-                    resultLabel.setText("BILAN : " + finalScore + " / " + nbImages);
-                    resultLabel.setForeground(finalScore >= 5 ? SUCCESS_GREEN : ERROR_RED);
-                });
-
+            } catch (RuntimeException re) {
+                if ("POISON_PILL".equals(re.getMessage())) gererArretBrutal();
+                else System.out.println("Erreur : " + re.getMessage());
+            } catch (InterruptedException ie) {
+                gererArretBrutal();
             } catch (Exception ex) {
                 System.out.println("Erreur durant l'animation : " + ex.getMessage());
             } finally {
-                SwingUtilities.invokeLater(() -> setBoutonsActifs(true)); // DÉVERROUILLAGE GLOBAL A LA FIN
+                final int fScore = scoreTotal;
+                final int fTotal = imagesTestees;
+                SwingUtilities.invokeLater(() -> {
+                    imageLabel.setIcon(null); 
+                    if (stopDemande || fTotal == 0) {
+                        imageLabel.setText("<html><div style='text-align: center;'><h1 style='color:#E74C3C;'>🛑 ANIMATION FOUDROYÉE</h1></div></html>");
+                    } else {
+                        String couleurScore = (fScore >= 6) ? "#4CAF50" : (fScore < 5 ? "#E74C3C" : "#FF9800"); 
+                        String htmlTrophy = "<html><div style='text-align: center; font-family: Segoe UI;'>"
+                                + "<h1 style='color: white; font-size: 36px; margin-bottom: 5px;'>🏆 TEST TERMINÉ</h1>"
+                                + "<h2 style='color: " + couleurScore + "; font-size: 50px; margin-top: 0px;'>" + (int)(((float)fScore/fTotal)*100) + " %</h2>"
+                                + "<p style='color: gray; font-size: 16px;'>" + fScore + " bonnes réponses sur " + fTotal + " images</p>"
+                                + "</div></html>";
+                        imageLabel.setText(htmlTrophy);
+                    }
+                });
+                nettoyerApresTache();
             }
-        }).start();
+        });
+        threadEnCours.start();
     }
 
     private void testerImageManuel() {
@@ -457,12 +455,9 @@ public class MenuGraphique extends JFrame {
         if (fc.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) return;
         
         File fichierImage = fc.getSelectedFile();
-        
-        setBoutonsActifs(false); // VERROUILLAGE GLOBAL PENDANT L'ANALYSE
-        resultLabel.setText("ANALYSE...");
-        resultLabel.setForeground(WARNING_ORANGE);
+        preparerAvantTache();
 
-        new Thread(() -> {
+        threadEnCours = new Thread(() -> {
             try {
                 BufferedImage bimg = ImageIO.read(fichierImage);
                 SwingUtilities.invokeLater(() -> {
@@ -471,16 +466,19 @@ public class MenuGraphique extends JFrame {
                     imageLabel.setText("");
                 });
                 executerInference(fichierImage, cbFusion.isSelected());
+            } catch (RuntimeException re) {
+                if ("POISON_PILL".equals(re.getMessage())) gererArretBrutal();
             } catch (Exception ex) {
                 System.out.println("Erreur de lecture de l'image.");
             } finally {
-                SwingUtilities.invokeLater(() -> setBoutonsActifs(true)); // DÉVERROUILLAGE
+                nettoyerApresTache();
             }
-        }).start();
+        });
+        threadEnCours.start();
     }
 
     // =====================================================================
-    // MOTEUR D'INFÉRENCE : CORRECTION DÉFINITIVE DU TEXTE BLEU
+    // MOTEUR D'INFÉRENCE INCHANGÉ
     // =====================================================================
     private int executerInference(File fichierImage, boolean avecFusion) {
         try {
@@ -493,7 +491,6 @@ public class MenuGraphique extends JFrame {
                 avecFusion = false; 
             }
 
-            // --- CORRECTION DU BUG BLEU : ON LIT LE CHEMIN ABSOLU ---
             String cheminAbsolu = fichierImage.getAbsolutePath().toLowerCase();
             int vraiLabel = -1; 
             if (cheminAbsolu.contains("cat")) vraiLabel = 0;
@@ -619,6 +616,38 @@ public class MenuGraphique extends JFrame {
         int start = str.indexOf("("); int end = str.indexOf(")");
         if (start != -1 && end != -1) return str.substring(start + 1, end);
         return "";
+    }
+
+    private JPanel creerPanneauStyle(String titre) {
+        JPanel p = new JPanel();
+        p.setBackground(PANEL_BG);
+        TitledBorder border = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(new Color(80, 80, 80)), titre);
+        border.setTitleColor(TEXT_COLOR);
+        border.setTitleFont(new Font("Segoe UI", Font.BOLD, 14));
+        p.setBorder(BorderFactory.createCompoundBorder(border, new EmptyBorder(10, 10, 10, 10)));
+        return p;
+    }
+
+    private JButton creerBoutonStyle(String texte, Color bgColor) {
+        JButton btn = new JButton(texte);
+        btn.setBackground(bgColor);
+        btn.setForeground(Color.WHITE);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(true);
+        btn.setFocusPainted(false);
+        btn.setBorder(BorderFactory.createEmptyBorder(12, 12, 12, 12));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent evt) {
+                if (btn.isEnabled()) btn.setBackground(bgColor.brighter());
+            }
+            public void mouseExited(MouseEvent evt) {
+                btn.setBackground(bgColor);
+            }
+        });
+        return btn;
     }
 
     public static void main(String[] args) {

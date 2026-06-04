@@ -77,6 +77,5 @@ public class TestParametres
 		System.out.println("\n=== COMPARAISON FINALE ===");
 		System.out.printf("eta=0.001,   MSE=0.15 : %.2f %%\n", score1);
 		System.out.printf("eta=0.00001, MSE=0.20 : %.2f %%\n", score2);
-		System.out.printf("Référence   (eta=0.0001, MSE=0.05) : 76.28 %%\n");
 	}
 }

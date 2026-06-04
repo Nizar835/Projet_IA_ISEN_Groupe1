@@ -42,12 +42,13 @@ public class TestSansNormalisation
 		
 		int nbEntreesNeurone = entreesArray[0].length;
 		iNeurone neurone = new NeuroneSigmoide(nbEntreesNeurone);
-		final float MSElimite = 0.15f; 
 		
-		System.out.println("Début de l'apprentissage SANS normalisation...");
+		// CORRECTION CRITIQUE : Limite très haute pour forcer l'arrêt immédiat (Crash-test)
+		final float MSElimite = 1000.0f; 
+		
+		System.out.println("Début de l'apprentissage SANS normalisation (Arrêt forcé prévu)...");
 		neurone.apprentissage(entreesArray, resultatsArray, MSElimite);
 		
-		// --- LA SAUVEGARDE EST AJOUTÉE ICI ---
 		neurone.sauvegarde("cerveau_sans_norm.txt");
 		System.out.println(">>> Apprentissage terminé et cerveau sauvegardé ! <<<");
 		
