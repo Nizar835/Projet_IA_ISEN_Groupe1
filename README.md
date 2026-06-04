@@ -1,61 +1,125 @@
-# Projet IA - Détection Chiens / Chats (ISEN - Groupe 1)
+# 🧠 Projet IA - Détection Signal / Image (ISEN - Groupe 1)
 
-Ce dépôt contient le code source du projet d'Intelligence Artificielle (Niveaux 1, 2 et 3) visant à différencier des images de chiens et de chats grâce à un réseau de neurones "from scratch" en Java.
+Ce dépôt contient le code source intégral de notre projet d'Intelligence Artificielle (Niveaux 1, 2 et 3) visant à classifier des images de chats, de chiens et d'animaux sauvages. 
 
-## ⚠️ Prérequis très important
-Avant de lancer quoi que ce soit, assurez-vous d'avoir téléchargé et décompressé le dossier `dataset_animaux/` à la racine du projet (au même niveau que ce README).  
-*Note : Ce dossier est ignoré par Git (via le `.gitignore`) pour ne pas surcharger le dépôt.*
+Le cœur de ce projet repose sur la création et l'entraînement d'un réseau de neurones artificiels **"from scratch" (sans aucune bibliothèque externe de Machine Learning comme TensorFlow ou OpenCV)**. Tout le traitement du signal (FFT, espaces colorimétriques) et l'interface graphique (Swing) sont codés en **Java natif (Vanilla Java)**.
 
 ---
 
-## 🚀 1. Lancer le Programme Principal (Niveaux 1 & 2)
-
-Le fichier `MainProjet.java` est le chef d'orchestre. Il charge les images, les normalise, entraîne le réseau binaire, esquive les images corrompues, et lance une démonstration.
-
-**Compilation :**
-```bash
-javac Image.java MainProjet.java neurone\*.java
+## ⚠️ 1. Prérequis & Architecture
+Avant de compiler ou d'exécuter le projet, assurez-vous d'avoir téléchargé et décompressé le jeu de données dans un dossier nommé `dataset_animaux/` à la racine du projet. L'arborescence doit être la suivante :
+```text
+Projet_IA_Groupe1/
+├── dataset_animaux/
+│   ├── train/ (contenant les images d'entraînement)
+│   └── test/  (contenant les images de test inédites)
+├── neurone/   (contenant iNeurone.java, Neurone.java, etc.)
+├── MenuGraphique.java
+├── Image.java
+├── TestRGB.java
+└── ...
 ```
 
-**Exécution :**
-```bash
-java -cp ".;neurone" MainProjet
-```
+*Note : Le dossier `dataset_animaux/` et les fichiers de poids synaptiques (`cerveau_*.txt`) sont ignorés par Git via le `.gitignore` pour ne pas surcharger le dépôt.*
 
 ---
 
-## 🧬 2. Lancer les Extensions (Niveau 3)
+## 🛠️ 2. Compilation Globale
 
-⚠️ **IMPORTANT (RAM) :** Les scripts suivants manipulent beaucoup de données (jusqu'à 20 000 images ou des images RGB 3x plus lourdes). Nous utilisons l'argument `-Xmx4G` lors de l'exécution pour autoriser Java à utiliser jusqu'à 4 Go de mémoire vive afin d'éviter les crashs systèmes (`OutOfMemoryError`).
+Puisque le projet ne requiert aucune dépendance externe, la compilation se fait avec les outils standards du JDK. Ouvrez votre terminal à la racine du projet et exécutez :
 
-### A. Test de l'apprentissage en Couleurs (RGB)
+```bash
+javac *.java neurone\*.java
+```
 
-Entraîne le réseau sur les images en couleurs (12 288 synapses au lieu de 4 096).  
-**Compilation :** `javac Image.java TestRGB.java neurone\*.java`  
-**Exécution :** `java -Xmx4G -cp ".;neurone" TestRGB`
+*(Si vous êtes sur Linux/Mac, utilisez un slash : `javac *.java neurone/*.java`)*
 
-### B. Test de l'Augmentation de Données (Miroir)
+---
 
-Double la taille du dataset (20 000 images) en appliquant un effet miroir horizontal sur chaque image.  
-**Compilation :** `javac Image.java FiltreImage.java TestMiroir.java neurone\*.java`  
-**Exécution :** `java -Xmx4G -cp ".;neurone" TestMiroir`
+## 🚀 3. L'Interface Graphique (Dashboard IA Pro - L'Intégrale)
 
-### C. Test de la Classification Multi-Classes (3 Catégories)
+Nous avons développé une interface graphique robuste permettant de piloter l'intégralité du projet, de générer les modèles et de tester les inférences en temps réel.
 
-Entraîne 3 neurones en parallèle pour classer les images de test entre CHAT, CHIEN et WILD.  
-**Compilation :** `javac Image.java TestMultiClasses.java neurone\*.java`  
-**Exécution :** `java -Xmx4G -cp ".;neurone" TestMultiClasses`
+**Exécution (Windows) :**
 
-### D. Matrice de Confusion (Analyse des erreurs)
+```bash
+java -Xmx4G -cp ".;neurone" MenuGraphique
+```
 
-Génère un tableau croisé 3x3 pour voir quelles catégories l'IA a tendance à confondre.  
-**Compilation :** `javac Image.java TestMatriceConfusion.java neurone\*.java`  
-**Exécution :** `java -Xmx4G -cp ".;neurone" TestMatriceConfusion`
+*(Note : L'argument `-Xmx4G` alloue 4 Go de RAM à Java. Cela est indispensable pour le traitement des matrices d'images en couleurs et des transformées de Fourier sur 20 000 images).*
 
-### E. Test d'Hyper-Paramètres (Optimisation de l'ETA)
+### Fonctionnalités de l'Interface :
 
-Cherche la valeur mathématique optimale de mise à jour des poids synaptiques pour apprendre plus vite sans stagner.  
-**Compilation :** `javac Image.java TestHyperParametres.java neurone\*.java`  
-**Exécution :** `java -cp ".;neurone" TestHyperParametres`
+* **🚀 L'Entraînement Séquentiel (L'Usine) :** Permet de lancer l'entraînement en file d'attente de toutes les extensions (Base, RGB, TSL, Miroir, FFT, Multi-classes) avec nettoyage automatique de la RAM (`System.gc()`) entre chaque modèle pour éviter la surcharge.
+* **🛑 Le Kill Switch (Arrêt d'Urgence) :** Un bouton stop sécurisé utilisant un pattern d'injection de `RuntimeException` ("Pilule Empoisonnée") pour foudroyer instantanément un apprentissage bloqué sans corrompre les fichiers de sauvegarde `.txt`.
+* **🤝 Ensemble Learning (Fusion) :** Permet de fusionner les probabilités de deux cerveaux distincts (ex: RGB + TSL) en temps réel pour améliorer la prédiction finale lors de l'inférence.
+* **🎲 Inférence / Animation :** Testez une image ciblée depuis votre disque dur, ou lancez une rafale de 10 images aléatoires inédites pour évaluer les modèles visuellement.
+
+---
+
+## 🧬 4. Exécution Individuelle des Scripts Scientifiques (En ligne de commande)
+
+Si vous souhaitez isoler l'exécution d'un modèle spécifique hors de l'interface graphique pour analyser ses logs détaillés dans la console, voici les commandes associées :
+
+### A. Modèle de Base (Niveaux 1 & 2 - Niveaux de gris)
+
+Charge les images, les normalise, entraîne un classifieur binaire (Chat vs Reste) et évalue son score.
+
+```bash
+java -Xmx4G -cp ".;neurone" MainProjet
+```
+
+### B. Extensions Colorimétriques (Niveau 3)
+
+* **Espace RGB (Rouge, Vert, Bleu) :** Entraîne le réseau sur les 3 canaux (12 288 synapses au lieu de 4 096) pour une convergence plus rapide.
+```bash
+java -Xmx4G -cp ".;neurone" TestRGB
+```
+
+* **Espace TSL (Teinte, Saturation, Luminosité) :** Convertit mathématiquement le signal visuel. *Démontre empiriquement la limite des réseaux linéaires face à des données circulaires (la Teinte).*
+```bash
+java -Xmx4G -cp ".;neurone" TestTSL
+```
+
+### C. Analyse Fréquentielle Spatiale (FFT)
+
+Aplatit le signal spatial en un signal 1D et applique une Transformée de Fourier Rapide complexe pour extraire les signatures fréquentielles (utilisation intensive du Multi-Threading).
+
+```bash
+java -Xmx4G -cp ".;neurone" TestFFT
+```
+
+### D. Data Augmentation (Filtre Miroir)
+
+Double la taille du jeu de données (40 000 images) en générant des symétries axiales pour contrer l'overfitting.
+
+```bash
+java -Xmx4G -cp ".;neurone" TestMiroir
+```
+
+### E. Classification Multi-Classes (One-vs-All)
+
+Entraîne 3 neurones Sigmoïdes en parallèle pour scinder les décisions mathématiques et classer les images en 3 catégories distinctes (Chats, Chiens, Animaux Sauvages).
+
+```bash
+java -Xmx4G -cp ".;neurone" TestMultiClasses
+```
+
+### F. Crash-Tests et Évaluations Statistiques
+
+* **Matrice de Confusion :** Génère des tableaux croisés dynamiques (2x2 pour le modèle binaire, 3x3 pour le multi-classes) mettant en évidence les faux positifs et faux négatifs.
+```bash
+java -cp ".;neurone" TestMatriceConfusion
+```
+
+* **Sans Normalisation :** Provoque sciemment un "Vanishing Gradient" (saturation de la Sigmoïde) pour prouver l'importance d'un signal borné entre 0.0 et 1.0.
+```bash
+java -Xmx4G -cp ".;neurone" TestSansNormalisation
+```
+
+* **Sans Mélange (Catastrophic Forgetting) :** Démontre l'effondrement de l'IA lorsque la condition *i.i.d* (indépendantes et identiquement distribuées) n'est pas respectée lors de la descente de gradient stochastique.
+```bash
+java -Xmx4G -cp ".;neurone" TestSansMelange
+```
 
 ---
